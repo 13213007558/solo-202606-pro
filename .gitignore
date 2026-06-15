@@ -1,6 +1,7 @@
 # Local configuration and secrets
 config.json
 
+
 # Runtime Git cache
 .github_upload/
 
@@ -10,6 +11,8 @@ config.json
 /example/*
 !/example/.gitkeep
 *.xlsx
+
+/docs/
 
 # Python
 __pycache__/
