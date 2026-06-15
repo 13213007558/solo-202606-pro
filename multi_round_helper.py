@@ -110,10 +110,15 @@ def action_git_upload(args):
 
     # 准备仓库
     if os.path.exists(os.path.join(clone_dir, '.git')):
+        ok, _, err = run_git(['git', 'remote', 'set-url', 'origin', repo])
+        if not ok:
+            return {"success": False, "error": f"Could not update repository remote: {err}"}
         run_git(['git', 'fetch', 'origin'], timeout=60)
     else:
         os.makedirs(os.path.dirname(clone_dir), exist_ok=True)
-        ok, out, err = run_git(['git', 'clone', repo, clone_dir], cwd=BASE_DIR, timeout=120)
+        ok, out, err = run_git(
+            ['git', 'clone', repo, clone_dir], cwd=BASE_DIR, timeout=120
+        )
         if not ok:
             return {"success": False, "error": f"Clone failed: {err}"}
 
@@ -185,7 +190,7 @@ def action_git_upload(args):
             before_ok, before_out, _ = run_git(['git', 'rev-parse', 'HEAD'])
             before_commit = before_out.strip() if before_ok else ''
             commit_ok, _, commit_err = run_git(
-                ['git', 'commit', '--only', '-m', msg, '--', folder_name]
+                ['git', 'commit', '-m', msg]
             )
             if not commit_ok:
                 return {

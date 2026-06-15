@@ -70,6 +70,22 @@ function startRuntimeLogger(options = {}) {
         finish('SIGTERM');
         process.exit(143);
     });
+    process.once('uncaughtException', (error) => {
+        console.error('[Logger] Uncaught exception:', error && error.stack ? error.stack : error);
+        finish('uncaughtException');
+        process.exit(1);
+    });
+    process.once('unhandledRejection', (reason) => {
+        console.error(
+            '[Logger] Unhandled rejection:',
+            reason && reason.stack ? reason.stack : reason
+        );
+        finish('unhandledRejection');
+        process.exit(1);
+    });
+    process.on('warning', (warning) => {
+        console.warn('[Logger] Process warning:', warning && warning.stack ? warning.stack : warning);
+    });
 
     return { logPath, finish };
 }

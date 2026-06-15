@@ -562,6 +562,7 @@ async function main() {
             console.log(`\n[Round ${round}] Step 2-3: Waiting ${WAIT_SECONDS}s + button detection...`);
             const waitStart = Date.now();
             const waitEnd = waitStart + WAIT_SECONDS * 1000;
+            let nextHeartbeat = waitStart + 60000;
             const buttonImages = ['images/zhixing.png', 'images/next.jpg', 'images/delete.png', 'images/ok.png', 'images/tijiao.png', 'images/yunxing.png', 'images/renyao.png', 'images/quxiao.jpg'];
             const activeHandles = tasks.filter(t => t.handle).map(t => [t.name, t.handle]);
 
@@ -578,6 +579,12 @@ async function main() {
                     const switchEnd = Date.now() + SWITCH_INTERVAL * 1000;
                     while (Date.now() < Math.min(switchEnd, waitEnd)) {
                         await new Promise(r => setTimeout(r, 1000));
+                        if (Date.now() >= nextHeartbeat) {
+                            const remainingSeconds = Math.max(0, Math.ceil((waitEnd - Date.now()) / 1000));
+                            const memoryMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
+                            console.log(`  [Heartbeat] Round ${round} alive; ${remainingSeconds}s remaining; Node RSS ${memoryMb} MB`);
+                            nextHeartbeat = Date.now() + 60000;
+                        }
                     }
                 }
                 // 每遍历完一轮窗口后清理 Edge，防止内存持续增长
