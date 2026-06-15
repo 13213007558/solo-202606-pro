@@ -130,3 +130,19 @@ SoloDemo/
 ├── tasks/                   # 任务工作目录
 └── log/                     # 运行日志
 ```
+
+
+
+## 代理配置
+
+```
+# 查看 HTTP/HTTPS 代理
+git config --global --get http.proxy
+git config --global --get https.proxy
+
+# 设置代理（假设代理运行在 127.0.0.1:7890）
+git config --global http.proxy http://127.0.0.1:7890
+git config --global https.proxy http://127.0.0.1:7890
+
+```
+
