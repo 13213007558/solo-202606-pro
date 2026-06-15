@@ -1,41 +1,127 @@
 {
   "paths": {
-    "trae_executable": "C:\\Path\\To\\Trae CN\\bin\\trae-cn.cmd",   //替换为Trae CN的安装路径
-    "python_executable": "C:\\Path\\To\\Anaconda\\envs\\project\\python.exe", //替换为Anaconda环境的Python可执行文件路径
+
+    // 替换为你本机的 Trae CN 安装路径
+    "trae_executable": "C:\\Path\\To\\Trae CN\\bin\\trae-cn.cmd",
+
+    // 替换为你本机的 Python 路径
+    "python_executable": "C:\\Path\\To\\Anaconda\\envs\\project\\python.exe",
+
     "tasks_directory": "tasks",
+
+    // 提示词存放目录，不用管
     "example_directory": "example",
+
+    // 运行日志目录，不用管
     "logs_directory": "log"
   },
+
   "deepseek": {
-    "api_key": "", //替换为Deepseek API密钥
+    // 必须修改：是，填入你的 API 密钥字符串
+    "api_key": "",
+
     "base_url": "https://api.deepseek.com",
+
     "model": "deepseek-chat",
+
+    // API 调用最大重试次数
+    // 当 API 返回解析失败、JSON 格式错误、或网络异常时自动重试
     "max_retries": 5,
+
+    // API 调用重试间隔（秒）
     "retry_delay_seconds": 2
   },
+
   "github": {
-    "repository": "",  //替换为GitHub仓库的URL
+
+    // GitHub 仓库 URL
+    // 格式：HTTPS 地址，如 "https://github.com/username/repo.git"
+    // 必须修改：是，替换为你的目标仓库地址
+    "repository": "",
+
+    // 推送的目标分支
+    // 默认值："main"
     "branch": "main",
-    "folder_prefix": "cp1",  //替换为项目文件夹的前缀
+
+    // 项目文件夹的前缀
+    // 用途：上传时文件夹命名格式为 {prefix}_{日期}_{任务名}
+    // 例如：prefix="cp1" → 文件夹名 "cp1_6.15_auto1"
+    // 可根据不同项目/实验设置不同前缀来区分
+    "folder_prefix": "cp1",
+
+    // Git 仓库本地缓存目录，不用管
     "repository_cache": ".github_upload/generated-projects",
+
+    // Git push 失败时的重试次数
+    // 当 push 遇到 non-fast-forward 或网络错误时会自动重试
+    // 遇到 non-fast-forward 会先 pull --rebase 再重试
     "retry_attempts": 3,
+
+    // Git push 重试间隔（秒）
+    // 每次重试之间等待的时间
     "retry_delay_seconds": 10
   },
+
   "automation": {
+
+    // 每次打开的窗口数
     "batch_size": 8,
+
+    // 多轮对话的总轮数，当前为3轮
     "rounds": 3,
+
+    // 后续轮次（第2轮起）的任务类型概率分布
+    // 用途：决定每一轮是生成"Bug修复"提示词还是"Feature迭代"提示词
+    // bug_fix：修复代码错误、功能缺失、运行异常等
+    // feature_iteration：在已有功能基础上优化、增强、调整样式等
+    // 约束：两个概率之和必须等于 1.0
     "subsequent_round_task_type_probabilities": {
       "bug_fix": 0.6,
       "feature_iteration": 0.4
     },
+
+    // 最后一轮的满意度概率
     "final_round_satisfaction_probability": 0.6,
-    "single_round_wait_seconds": 500,
-    "multi_round_wait_seconds": 600,
+
+    // 单轮等待时间（秒）
+    "single_round_wait_seconds": 900,
+
+    // 多轮模式下每轮等待时间（秒）
+    "multi_round_wait_seconds": 900,
+
+    // 窗口切换间隔（秒）
+    // 用途：在等待期间，轮流切换到各个 Trae 窗口检测按钮状态
+    // 每个窗口停留此时间后再切换到下一个
     "switch_interval_seconds": 15,
+
+    // Stop 按钮检测时的停留时间（秒）
+    // 用途：等待阶段结束后，逐个窗口检测并点击 stop 按钮
+    // 每个窗口之间等待此时间，确保前一个窗口的 stop 操作完成
     "stop_dwell_seconds": 10,
+
+    // Git 上传超时时间（秒）
+    // 用途：执行 git clone / git push 等操作的最大等待时间
+    // 如果网络较慢或仓库较大，可适当增大此值
     "upload_timeout_seconds": 10,
+
+    // Trace 获取超时时间（秒）
+    // 用途：获取 AI 执行轨迹（trace）的最大等待时间
+    // 程序会在此时间内反复尝试点击 finish 按钮获取 trace
+    // 如果 AI 响应较慢或 finish 按钮难以识别，可增大此值
     "trace_timeout_seconds": 10,
+
+    // 提示词生成等待时间（秒）
+    // 用途：每轮结束后，等待 DeepSeek API 生成下一轮提示词的时间
+    // 此等待在生成提示词的 API 调用之前，用于间隔不同轮次
+    // 设为 0 可跳过等待（不推荐，可能导致 API 限流）
+    // 建议值：30-120 秒
     "prompt_generation_wait_seconds": 60,
+
+    // 每隔几个批次执行一次深度清理
+    // 用途：每隔此数量的批次后，会执行更彻底的临时文件清理
+    // 清理内容包括：Trae 进程、Edge 浏览器进程、系统临时文件等
+    // 设为 0 表示不进行定期清理，设为 1 表示每批次都清理
+    // 建议值：2-5，在性能和稳定性之间取得平衡
     "cleanup_every_batches": 3
   }
 }
