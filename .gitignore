@@ -2,11 +2,14 @@
 __pycache__/
 *.py[cod]
 
-#忽略文件夹内容,但保留文件名
 /tasks/
+!/tasks/.gitkeep
 /test/
+!/test/.gitkeep
 /docs/
-/example
+!/docs/.gitkeep
+/example/
+!/example/.gitkeep
 
 #Node
 node_modules/ 
