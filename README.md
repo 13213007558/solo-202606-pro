@@ -43,6 +43,7 @@ node run_multi_round_auto.js
 | `images/` | Trae 界面识别图片 |
 | `example/` | 待执行的首轮提示词，本地生成内容默认不提交 |
 | `tasks/` | 自动化生成的项目和结果，本地生成内容默认不提交 |
+| `log/` | 每次多轮自动化运行生成的日志 |
 | `test/` | 手工测试脚本 |
 | `.github_upload/` | 生成项目仓库缓存，不提交 |
 
@@ -58,3 +59,13 @@ node run_multi_round_auto.js
 根目录 Git 的 `origin` 用于同步本项目源码。程序运行时上传生成项目的仓库由 `config.json` 中的 `github.repository` 单独控制。
 
 详细操作见 [docs/GitHub双仓库与敏感配置操作指南.md](docs/GitHub双仓库与敏感配置操作指南.md)。
+
+## 运行日志
+
+每次执行多轮自动化都会生成独立日志：
+
+```text
+log/multi_round_YYYY-MM-DD_HH-mm-ss_PID.log
+```
+
+日志与控制台同步输出，并记录启动命令、开始时间、结束状态和异常信息。
