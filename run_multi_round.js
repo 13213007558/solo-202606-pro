@@ -3,13 +3,12 @@ const path = require('path');
 const { execSync } = require('child_process');
 const readline = require('readline');
 const os = require('os');
-const APP_CONFIG = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
-
-function configValue(section, key, fallback) {
-    return APP_CONFIG[section] && APP_CONFIG[section][key] !== undefined
-        ? APP_CONFIG[section][key]
-        : fallback;
-}
+const {
+    getConfig,
+    getTaskTypeProbabilities,
+    resolveConfigPath,
+    validateProbability,
+} = require('./app_config');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 function question(prompt) { return new Promise(resolve => rl.question(prompt, resolve)); }
@@ -22,57 +21,31 @@ function fmtTime(ms) {
 // ============================================================
 // CONFIG
 // ============================================================
-const TRAE_EXE = configValue('paths', 'trae_executable', '');
-const PYTHON_EXE = configValue('paths', 'python_executable', 'python');
+const TRAE_EXE = getConfig('paths', 'trae_executable', '');
+const PYTHON_EXE = getConfig('paths', 'python_executable', 'python');
 
 // 默认参数（可通过命令行覆盖）
-let ROUNDS = configValue('automation', 'rounds', 3);
-let BATCH_SIZE = configValue('automation', 'batch_size', 8);
-let WAIT_SECONDS = configValue('automation', 'multi_round_wait_seconds', 600);
-let SWITCH_INTERVAL = configValue('automation', 'switch_interval_seconds', 15);
-let STOP_DWELL = configValue('automation', 'stop_dwell_seconds', 10);
-let UPLOAD_TIMEOUT = configValue('automation', 'upload_timeout_seconds', 10);
-let TRACE_TIMEOUT = configValue('automation', 'trace_timeout_seconds', 10);
-let PROMPT_GEN_TIME = configValue('automation', 'prompt_generation_wait_seconds', 60);
-const FINAL_ROUND_SATISFACTION_PROBABILITY = configValue(
+let ROUNDS = getConfig('automation', 'rounds', 3);
+let BATCH_SIZE = getConfig('automation', 'batch_size', 8);
+let WAIT_SECONDS = getConfig('automation', 'multi_round_wait_seconds', 600);
+let SWITCH_INTERVAL = getConfig('automation', 'switch_interval_seconds', 15);
+let STOP_DWELL = getConfig('automation', 'stop_dwell_seconds', 10);
+let UPLOAD_TIMEOUT = getConfig('automation', 'upload_timeout_seconds', 10);
+let TRACE_TIMEOUT = getConfig('automation', 'trace_timeout_seconds', 10);
+let PROMPT_GEN_TIME = getConfig('automation', 'prompt_generation_wait_seconds', 60);
+const FINAL_ROUND_SATISFACTION_PROBABILITY = getConfig(
     'automation', 'final_round_satisfaction_probability', 0.6
 );
-const TASK_TYPE_PROBABILITIES = configValue(
-    'automation',
-    'subsequent_round_task_type_probabilities',
-    { bug_fix: 0.6, feature_iteration: 0.4 }
+const TASK_TYPE_PROBABILITIES = getTaskTypeProbabilities();
+validateProbability(
+    FINAL_ROUND_SATISFACTION_PROBABILITY,
+    'automation.final_round_satisfaction_probability'
 );
 
-if (
-    typeof FINAL_ROUND_SATISFACTION_PROBABILITY !== 'number' ||
-    FINAL_ROUND_SATISFACTION_PROBABILITY < 0 ||
-    FINAL_ROUND_SATISFACTION_PROBABILITY > 1
-) {
-    throw new Error('automation.final_round_satisfaction_probability must be between 0 and 1');
-}
-if (
-    !TASK_TYPE_PROBABILITIES ||
-    typeof TASK_TYPE_PROBABILITIES.bug_fix !== 'number' ||
-    typeof TASK_TYPE_PROBABILITIES.feature_iteration !== 'number' ||
-    TASK_TYPE_PROBABILITIES.bug_fix < 0 ||
-    TASK_TYPE_PROBABILITIES.bug_fix > 1 ||
-    TASK_TYPE_PROBABILITIES.feature_iteration < 0 ||
-    TASK_TYPE_PROBABILITIES.feature_iteration > 1 ||
-    Math.abs(
-        TASK_TYPE_PROBABILITIES.bug_fix +
-        TASK_TYPE_PROBABILITIES.feature_iteration -
-        1
-    ) > 1e-9
-) {
-    throw new Error(
-        'Bug fix and feature iteration probabilities must be between 0 and 1 and add up to 1'
-    );
-}
-
 // Git 配置
-const GIT_REPO = configValue('github', 'repository', '');
-const GIT_BRANCH = configValue('github', 'branch', 'main');
-const FOLDER_PREFIX = configValue('github', 'folder_prefix', 'cp1');
+const GIT_REPO = getConfig('github', 'repository', '');
+const GIT_BRANCH = getConfig('github', 'branch', 'main');
+const FOLDER_PREFIX = getConfig('github', 'folder_prefix', 'cp1');
 
 // ============================================================
 // 解析命令行参数
@@ -94,8 +67,8 @@ for (let i = 0; i < argv.length; i += 2) {
 }
 
 const BASE_DIR = __dirname;
-const EXAMPLE_DIR = path.resolve(__dirname, configValue('paths', 'example_directory', 'example'));
-const TASKS_DIR = path.resolve(__dirname, configValue('paths', 'tasks_directory', 'tasks'));
+const EXAMPLE_DIR = resolveConfigPath('paths', 'example_directory', 'example');
+const TASKS_DIR = resolveConfigPath('paths', 'tasks_directory', 'tasks');
 
 // ============================================================
 // Win32 API (PowerShell)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Trae Helper for Windows
-配合 run.js 获取 SessionID 和 Trace（执行轨迹）
+配合 run_multi_round.js 获取 SessionID 和 Trace（执行轨迹）
 
 依赖安装:
     pip install pyautogui pyperclip opencv-python Pillow
@@ -39,7 +39,7 @@ except ImportError as e:
 # 启用 failsafe：鼠标移到屏幕左上角会抛出异常中断，防止失控
 pyautogui.FAILSAFE = True
 
-# ---------- SessionID 正则（与 trae_automation_advanced.py 保持一致） ----------
+# ---------- SessionID 正则 ----------
 SESSION_ID_PATTERN = re.compile(
     r'\.(\d+):([a-f0-9]+)_([a-f0-9]+)\.([a-f0-9]+)\.([a-f0-9]+):([^.]+)\.T\(([^)]+)\)'
 )
@@ -553,7 +553,7 @@ def main():
     except Exception as e:
         result = {"success": False, "error": f"Internal error: {e}"}
 
-    # 只输出 JSON，方便 run.js 解析
+    # 只输出 JSON，方便 run_multi_round.js 解析
     print(json.dumps(result, ensure_ascii=False))
 
 

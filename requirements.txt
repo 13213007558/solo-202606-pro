@@ -1,0 +1,7 @@
+openai
+openpyxl
+opencv-python
+pandas
+Pillow
+pyautogui
+pyperclip

@@ -1,33 +1,25 @@
-# Python 缓存
-__pycache__/
-*.py[cod]
+# Local configuration and secrets
+config.json
 
+# Runtime Git cache
+.github_upload/
+
+# Generated task inputs and outputs
 /tasks/*
 !/tasks/.gitkeep
-
 /example/*
 !/example/.gitkeep
-
-/test/*
-!/test/.gitkeep
-
-/docs/*
-!/docs/.gitkeep
-
-#Node
-node_modules/ 
-
-/定时任务.txt
-
-# 日志
-/log/
-
-# Excel 临时文件
 *.xlsx
 
-# 本地状态
-.last_sessionid_pos.json
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
-# 敏感或本地配置，确认其中有密码或令牌时再忽略
-config.json
-.github_upload/
+# Node.js
+node_modules/
+
+# Runtime state and logs
+.last_sessionid_pos.json
+*.log
+~$*
