@@ -3,7 +3,8 @@
     "trae_executable": "C:\\Path\\To\\Trae CN\\bin\\trae-cn.cmd",
     "python_executable": "C:\\Path\\To\\Anaconda\\envs\\project\\python.exe",
     "tasks_directory": "tasks",
-    "example_directory": "example"
+    "example_directory": "example",
+    "logs_directory": "log"
   },
   "deepseek": {
     "api_key": "",

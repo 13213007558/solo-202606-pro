@@ -9,6 +9,13 @@ const {
     resolveConfigPath,
     validateProbability,
 } = require('./app_config');
+const { startRuntimeLogger } = require('./runtime_logger');
+
+const runtimeLogger = startRuntimeLogger({
+    baseDir: __dirname,
+    logsDir: resolveConfigPath('paths', 'logs_directory', 'log'),
+    prefix: 'multi_round',
+});
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 function question(prompt) { return new Promise(resolve => rl.question(prompt, resolve)); }
@@ -792,7 +799,13 @@ async function main() {
     console.log('\n==========================================');
     console.log('  ALL BATCHES & ROUNDS COMPLETE!');
     console.log('==========================================');
+    runtimeLogger.finish('completed');
     question('Press Enter to exit...').then(() => rl.close());
 }
 
-main().catch(err => { console.error('ERROR:', err); rl.close(); process.exit(1); });
+main().catch(err => {
+    console.error('ERROR:', err);
+    runtimeLogger.finish('failed');
+    rl.close();
+    process.exit(1);
+});
