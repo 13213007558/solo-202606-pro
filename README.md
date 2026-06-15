@@ -64,7 +64,7 @@ node run_multi_round_auto.js --rounds 3 --wait-seconds 900 --batch-size 8
 | 手动确认 | `node run_multi_round.js` | 启动前需输入 Y 确认 |
 | 定时执行 | `node schedule_run.js 22:00` | 在指定时间自动启动 |
 
-定时执行示例——凌晨 2:30 运行：
+定时执行示例——凌晨 00:00 运行：
 
 ```powershell
 node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 900 --batch-size 8
