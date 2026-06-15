@@ -1,0 +1,14 @@
+  新建了 1 个文件：schedule_run.js
+
+  使用方式：
+
+  # 00:00 执行默认命令（3轮，8窗口，600s）
+  node schedule_run.js 00:00
+
+  # 指定自定义命令
+  node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 600 --batch-size 8
+
+  # 凌晨 2:30 执行
+  node schedule_run.js 02:30 node run_multi_round_auto.js --rounds 3 --wait-seconds 600 --batch-size 8
+
+  运行后会显示倒计时，到点自动启动命令。如果指定时间已过，会自动推迟到第二天同一时间。

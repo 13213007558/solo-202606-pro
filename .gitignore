@@ -1,0 +1,27 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+#忽略文件夹内容,但保留文件名
+/tasks/
+/test/
+/docs/
+/example
+
+#Node
+node_modules/ 
+
+/定时任务.txt/
+
+# 日志
+/log/
+
+# Excel 临时文件
+*.xlsx
+
+# 本地状态
+.last_sessionid_pos.json
+
+# 敏感或本地配置，确认其中有密码或令牌时再忽略
+config.json
+.github_upload/
