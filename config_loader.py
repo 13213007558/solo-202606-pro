@@ -43,10 +43,26 @@ def get_path(path: str, default: str | None = None) -> Path:
     return result if result.is_absolute() else BASE_DIR / result
 
 
-def get_deepseek_config() -> tuple[str, str, str]:
+def get_deepseek_config(required: bool = False) -> tuple[str, str, str]:
     api_key = os.getenv("DEEPSEEK_API_KEY") or str(get_config("deepseek.api_key", ""))
     base_url = os.getenv("DEEPSEEK_BASE_URL") or str(
         get_config("deepseek.base_url", "")
     )
     model = os.getenv("DEEPSEEK_MODEL") or str(get_config("deepseek.model", ""))
+    if required:
+        missing = []
+        if not api_key.strip():
+            missing.append("api_key")
+        if not base_url.strip():
+            missing.append("base_url")
+        if not model.strip():
+            missing.append("model")
+        if missing:
+            raise RuntimeError(
+                "DeepSeek 配置不完整，缺少: "
+                + ", ".join(missing)
+                + f"。请修改 {CONFIG_PATH} 中的 deepseek 配置，"
+                + "或设置 DEEPSEEK_API_KEY、DEEPSEEK_BASE_URL、"
+                + "DEEPSEEK_MODEL 环境变量。"
+            )
     return api_key, base_url, model

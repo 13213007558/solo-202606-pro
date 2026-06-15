@@ -3,6 +3,7 @@ import os
 import argparse
 import json
 import re
+import sys
 import time
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, Optional, Any
@@ -20,7 +21,11 @@ CONFIG = {
     "CONTENT_PREVIEW_LENGTH": 300,  # 预览内容长度
 }
 
-API_KEY, API_BASE_URL, API_MODEL = get_deepseek_config()
+try:
+    API_KEY, API_BASE_URL, API_MODEL = get_deepseek_config(required=True)
+except RuntimeError as exc:
+    print(f"配置错误: {exc}", file=sys.stderr)
+    raise SystemExit(2)
 CONFIG["API_MODEL"] = API_MODEL
 client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
 

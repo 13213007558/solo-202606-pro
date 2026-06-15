@@ -41,13 +41,10 @@ ROUND_NAMES = ["", "第一轮", "第二轮", "第三轮", "第四轮", "第五�
 
 
 def get_ai_client():
-    if not API_KEY or not BASE_URL or not MODEL:
-        raise RuntimeError(
-            "DeepSeek configuration is incomplete in config.json"
-        )
+    api_key, base_url, _ = get_deepseek_config(required=True)
     try:
         from openai import OpenAI
-        return OpenAI(api_key=API_KEY, base_url=BASE_URL)
+        return OpenAI(api_key=api_key, base_url=base_url)
     except ImportError:
         print(json.dumps({"success": False, "error": "Missing openai package. Run: pip install openai"}))
         sys.exit(1)
