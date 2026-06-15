@@ -1,7 +1,3 @@
-# Local configuration and secrets
-config.json
-
-
 # Runtime Git cache
 .github_upload/
 

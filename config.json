@@ -1,22 +1,22 @@
 {
   "paths": {
-    "trae_executable": "C:\\Path\\To\\Trae CN\\bin\\trae-cn.cmd",
-    "python_executable": "C:\\Path\\To\\Anaconda\\envs\\project\\python.exe",
+    "trae_executable": "C:\\Path\\To\\Trae CN\\bin\\trae-cn.cmd",   //替换为Trae CN的安装路径
+    "python_executable": "C:\\Path\\To\\Anaconda\\envs\\project\\python.exe", //替换为Anaconda环境的Python可执行文件路径
     "tasks_directory": "tasks",
     "example_directory": "example",
     "logs_directory": "log"
   },
   "deepseek": {
-    "api_key": "",
+    "api_key": "", //替换为Deepseek API密钥
     "base_url": "https://api.deepseek.com",
     "model": "deepseek-chat",
     "max_retries": 5,
     "retry_delay_seconds": 2
   },
   "github": {
-    "repository": "https://github.com/owner/generated-projects.git",
+    "repository": "",  //替换为GitHub仓库的URL
     "branch": "main",
-    "folder_prefix": "cp1",
+    "folder_prefix": "cp1",  //替换为项目文件夹的前缀
     "repository_cache": ".github_upload/generated-projects",
     "retry_attempts": 3,
     "retry_delay_seconds": 10
