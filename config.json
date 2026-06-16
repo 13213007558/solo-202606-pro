@@ -2,10 +2,10 @@
   "paths": {
 
     // 替换为你本机的 Trae CN 安装路径
-    "trae_executable": "C:\\Path\\To\\Trae CN\\bin\\trae-cn.cmd",
+    "trae_executable": "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Trae CN\\bin\\trae-cn.cmd",
 
     // 替换为你本机的 Python 路径
-    "python_executable": "C:\\Path\\To\\Anaconda\\envs\\project\\python.exe",
+    "python_executable": "D:\\Anaconda\\envs\\project\\python.exe",
 
     "tasks_directory": "tasks",
 
@@ -18,7 +18,7 @@
 
   "deepseek": {
     // 必须修改：是，填入你的 API 密钥字符串
-    "api_key": "",
+    "api_key": "sk-eefa37189f874b8b86724260286367c4",
 
     "base_url": "https://api.deepseek.com",
 
@@ -37,7 +37,7 @@
     // GitHub 仓库 URL
     // 格式：HTTPS 地址，如 "https://github.com/username/repo.git"
     // 必须修改：是，替换为你的目标仓库地址
-    "repository": "",
+    "repository": "https://github.com/NUDT-ZSL/Solo.git",
 
     // 推送的目标分支
     // 默认值："main"
@@ -50,7 +50,7 @@
     "folder_prefix": "cp1",
 
     // Git 仓库本地缓存目录，不用管
-    "repository_cache": ".github_upload/generated-projects",
+    "repository_cache": ".github_upload/Solo",
 
     // Git push 失败时的重试次数
     // 当 push 遇到 non-fast-forward 或网络错误时会自动重试

@@ -349,6 +349,32 @@ function isFolderEmpty(folderPath) {
     return fs.readdirSync(folderPath).length === 0;
 }
 
+function moveInitialPromptsAfterFinalRound(tasks) {
+    let moved = 0;
+    let skipped = 0;
+
+    for (const task of tasks) {
+        if (!task.promptFile || !fs.existsSync(task.promptFile)) {
+            skipped++;
+            console.log(`  [${task.name}] Source prompt already moved or missing`);
+            continue;
+        }
+
+        const dst = path.join(task.path, 'prompt_1.json');
+        try {
+            fs.copyFileSync(task.promptFile, dst);
+            fs.unlinkSync(task.promptFile);
+            moved++;
+            console.log(`  [${task.name}] Moved ${path.basename(task.promptFile)} -> prompt_1.json`);
+        } catch (e) {
+            skipped++;
+            console.log(`  [${task.name}] Failed to move ${path.basename(task.promptFile)}: ${e.message}`);
+        }
+    }
+
+    return { moved, skipped };
+}
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -367,7 +393,7 @@ async function main() {
 
     // 扫描全部提示词
     const allPromptFiles = fs.readdirSync(EXAMPLE_DIR)
-        .filter(f => f.endsWith('.json') && !f.endsWith('_down.json') && !f.startsWith('result_'))
+        .filter(f => /^prompt_\d+\.json$/.test(f))
         .sort()
         .map(f => path.join(EXAMPLE_DIR, f));
 
@@ -504,10 +530,10 @@ async function main() {
                 if (round === 1) {
                     const dst = path.join(task.path, `prompt_1.json`);
                     try {
-                        fs.renameSync(task.promptFile, dst);
-                        console.log(`  Moved ${path.basename(task.promptFile)} -> ${task.name}/prompt_1.json`);
+                        fs.copyFileSync(task.promptFile, dst);
+                        console.log(`  Copied ${path.basename(task.promptFile)} -> ${task.name}/prompt_1.json`);
                     } catch (e) {
-                        try { fs.copyFileSync(task.promptFile, dst); fs.unlinkSync(task.promptFile); } catch (e2) {}
+                        console.log(`  Failed to copy ${path.basename(task.promptFile)} -> ${task.name}/prompt_1.json`);
                     }
                 }
 
@@ -754,6 +780,12 @@ async function main() {
             ]);
             if (roundExport && roundExport.success) {
                 console.log(`  XLSX updated (${roundExport.data.rows} rows)`);
+            }
+
+            if (round === ROUNDS) {
+                console.log(`\n[Round ${round}] Final cleanup: moving source prompts from example...`);
+                const moveResult = moveInitialPromptsAfterFinalRound(tasks);
+                console.log(`  Source prompts moved: ${moveResult.moved}, skipped: ${moveResult.skipped}`);
             }
         }
 

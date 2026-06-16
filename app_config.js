@@ -12,10 +12,63 @@ function loadConfig() {
     }
 
     try {
-        return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+        return JSON.parse(stripJsonComments(fs.readFileSync(CONFIG_PATH, 'utf8')));
     } catch (error) {
         throw new Error(`Invalid JSON in ${CONFIG_PATH}: ${error.message}`);
     }
+}
+
+function stripJsonComments(source) {
+    let result = '';
+    let inString = false;
+    let stringQuote = '';
+    let escaped = false;
+
+    for (let i = 0; i < source.length; i += 1) {
+        const char = source[i];
+        const next = source[i + 1];
+
+        if (inString) {
+            result += char;
+            if (escaped) {
+                escaped = false;
+            } else if (char === '\\') {
+                escaped = true;
+            } else if (char === stringQuote) {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (char === '"' || char === "'") {
+            inString = true;
+            stringQuote = char;
+            result += char;
+            continue;
+        }
+
+        if (char === '/' && next === '/') {
+            while (i < source.length && source[i] !== '\n') {
+                i += 1;
+            }
+            result += '\n';
+            continue;
+        }
+
+        if (char === '/' && next === '*') {
+            i += 2;
+            while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) {
+                result += source[i] === '\n' ? '\n' : ' ';
+                i += 1;
+            }
+            i += 1;
+            continue;
+        }
+
+        result += char;
+    }
+
+    return result;
 }
 
 const config = loadConfig();

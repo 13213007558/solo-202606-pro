@@ -13,7 +13,7 @@ CONFIG_PATH = BASE_DIR / "config.json"
 def load_config() -> dict[str, Any]:
     try:
         with CONFIG_PATH.open("r", encoding="utf-8") as file:
-            config = json.load(file)
+            config = json.loads(strip_json_comments(file.read()))
     except FileNotFoundError as exc:
         raise RuntimeError(f"Configuration file not found: {CONFIG_PATH}") from exc
     except json.JSONDecodeError as exc:
@@ -21,6 +21,57 @@ def load_config() -> dict[str, Any]:
     if not isinstance(config, dict):
         raise RuntimeError(f"Configuration root must be an object: {CONFIG_PATH}")
     return config
+
+
+def strip_json_comments(source: str) -> str:
+    result: list[str] = []
+    in_string = False
+    string_quote = ""
+    escaped = False
+    i = 0
+
+    while i < len(source):
+        char = source[i]
+        next_char = source[i + 1] if i + 1 < len(source) else ""
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == string_quote:
+                in_string = False
+            i += 1
+            continue
+
+        if char in {'"', "'"}:
+            in_string = True
+            string_quote = char
+            result.append(char)
+            i += 1
+            continue
+
+        if char == "/" and next_char == "/":
+            while i < len(source) and source[i] != "\n":
+                i += 1
+            result.append("\n")
+            continue
+
+        if char == "/" and next_char == "*":
+            i += 2
+            while i < len(source) and not (
+                source[i] == "*" and i + 1 < len(source) and source[i + 1] == "/"
+            ):
+                result.append("\n" if source[i] == "\n" else " ")
+                i += 1
+            i += 2
+            continue
+
+        result.append(char)
+        i += 1
+
+    return "".join(result)
 
 
 CONFIG = load_config()
