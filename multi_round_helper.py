@@ -26,16 +26,6 @@ TASKS_DIR = str(get_path('paths.tasks_directory', 'tasks'))
 # DeepSeek API 配置
 API_KEY, BASE_URL, MODEL = get_deepseek_config()
 
-TRACE_ERROR_PATTERNS = [
-    "服务端异常，请稍后重试 (-1)",
-    "模型请求异常",
-    "输出过长，请输入\"继续\"后获得更多结果。",
-    "请求限流，请稍后重试 (4008)",
-    "模型请求失败，请稍后重试。 (3003)",
-    "检测到模型循环，模型请求终止",
-    "系统未知错误，请尝试新建任务或者重启TRAE",
-]
-
 ROUND_NAMES = ["", "第一轮", "第二轮", "第三轮", "第四轮", "第五轮",
                "第六轮", "第七轮", "第八轮", "第九轮", "第十轮"]
 
@@ -281,33 +271,7 @@ def action_git_upload(args):
 def action_clean_trace(args):
     tasks = load_tasks(args.tasks_json)
     round_num = args.round
-    cleaned = 0
-
-    for task in tasks:
-        task_name = task['name']
-        task_path = task['path']
-        result_data = load_result(task_path, task_name)
-        rd = get_round_data(result_data, round_num)
-        if not rd or not rd.get('trace'):
-            continue
-
-        trace = rd['trace']
-        if trace == 'null' or not trace:
-            continue
-
-        original = trace
-        for pattern in TRACE_ERROR_PATTERNS:
-            trace = trace.replace(pattern, '')
-
-        trace = re.sub(r'\s{2,}', ' ', trace).strip()
-
-        if trace != original:
-            rd['trace'] = trace
-            set_round_data(result_data, round_num, rd)
-            save_result(task_path, task_name, result_data)
-            cleaned += 1
-
-    return {"success": True, "data": {"cleaned": cleaned}}
+    return {"success": True, "data": {"cleaned": 0, "preserved": len(tasks), "round": round_num}}
 
 
 # ============================================================

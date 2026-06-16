@@ -703,14 +703,8 @@ async function main() {
                 try { execSync('taskkill /F /IM msedge.exe', { stdio: 'ignore', timeout: 5000 }); } catch (e) {}
             }
 
-            // ---------- 步骤 7-8: 清理 trace + 不满意原因 ----------
-            console.log(`\n[Round ${round}] Step 7: Cleaning traces...`);
-            const cleanResult = runMultiRoundHelper('clean_trace', [
-                '--tasks-json', tasksJson, '--round', String(round)
-            ]);
-            console.log(`  Cleaned: ${(cleanResult && cleanResult.data && cleanResult.data.cleaned) || 0} tasks`);
-
-            console.log(`\n[Round ${round}] Step 8: Generating dissatisfaction reasons...`);
+            // ---------- 步骤 7: 保留原始 trace + 生成不满意原因 ----------
+            console.log(`\n[Round ${round}] Step 7: Generating dissatisfaction reasons...`);
             if (round === ROUNDS) {
                 // 最后一轮：按 config.json 配置的概率判定满意
                 let satisfiedCount = 0, unsatisfiedTasks = [];
