@@ -18,7 +18,7 @@
 
   "deepseek": {
     // 必须修改：是，填入你的 API 密钥字符串
-    "api_key": "sk-eefa37189f874b8b86724260286367c4",
+    "api_key": "",
 
     "base_url": "https://api.deepseek.com",
 
