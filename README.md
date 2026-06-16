@@ -23,6 +23,8 @@ pip install -r requirements.txt
 
 ### 2. 配置 config.json
 
+先把config_example修改为config.json
+
 需修改以下 **4 项**：
 
 | 配置项 | 路径 | 说明 |
