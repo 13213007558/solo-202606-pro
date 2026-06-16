@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # VersionFastPro
 
 基于 Trae CN 的 AI 代码生成多轮自动化测试平台。自动生成提示词、发送至 Trae CN、收集执行结果、迭代多轮对话，并汇总导出。
@@ -146,7 +145,3 @@ git config --global http.proxy http://127.0.0.1:7890
 git config --global https.proxy http://127.0.0.1:7890
 
 ```
-
-=======
-初始化
->>>>>>> origin/main
