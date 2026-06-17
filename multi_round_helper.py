@@ -277,7 +277,7 @@ def action_clean_trace(args):
 # ============================================================
 # ACTION: fill_dissatisfaction
 # ============================================================
-DISSATISFACTION_SYSTEM_PROMPT = """你是一位经验丰富的技术负责人，正在审核AI交付的工作产物。请根据用户的需求和AI的执行过程，写出具体的不满意原因。
+DISSATISFACTION_SYSTEM_PROMPT = """你是一位经验丰富的技术负责人，正在审核AI交付的工作产物。请根据用户的需求、AI的执行过程以及当前项目实际交付的代码文件，写出具体的不满意原因。
 
 输出格式要求：
 产物不满意：
@@ -289,7 +289,8 @@ DISSATISFACTION_SYSTEM_PROMPT = """你是一位经验丰富的技术负责人，
 2. ...
 
 要求：
-- 每条原因必须具体、可操作，包含技术细节
+- 必须结合下面提供的"当前项目代码"进行逐文件审查，指出代码中具体的错误、遗漏或与需求不符的实现
+- 每条原因必须具体、可操作，包含技术细节（如文件名、函数名、变量名或代码逻辑问题）
 - 不要写笼统的评价，必须指出具体的代码问题或流程缺陷
 - 不要使用AI/模型/智能体等元语言
 - 语气像经验丰富的技术负责人在审查下属工作
@@ -317,7 +318,18 @@ def action_fill_dissatisfaction(args):
         if not prompt and not trace:
             continue
 
-        user_msg = f"【用户需求 Prompt】：\n{prompt or '(无)'}\n\n【AI执行过程 Trace】：\n{trace or '(无)'}\n\n请根据以上内容，严格按照格式要求写出产物不满意原因和过程不满意原因。"
+        code_preview = scan_code_files(task_path, max_files=8, max_chars=5000)
+
+        user_msg = f"""【用户需求 Prompt】：
+{prompt or '(无)'}
+
+【AI执行过程 Trace】：
+{trace or '(无)'}
+
+【当前项目代码（部分）】：
+{code_preview}
+
+请根据以上内容，并结合"当前项目代码"逐文件审查，严格按照格式要求写出产物不满意原因和过程不满意原因。"""
 
         for attempt in range(3):
             try:
