@@ -49,7 +49,7 @@ python generate.py -n 100
 ### 4. 启动多轮自动化
 
 ```powershell
-node run_multi_round_auto.js --rounds 3 --wait-seconds 900 --batch-size 8
+node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 8
 ```
 
 | 参数 | 说明 |
@@ -69,7 +69,7 @@ node run_multi_round_auto.js --rounds 3 --wait-seconds 900 --batch-size 8
 定时执行示例——凌晨 00:00 运行：
 
 ```powershell
-node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 900 --batch-size 8
+node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 8
 ```
 
 ## 每轮执行流程
