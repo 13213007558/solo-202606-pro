@@ -640,19 +640,7 @@ async function main() {
                 isFirstStop = false;
             }
 
-            // ---------- 步骤 5: Git 上传 ----------
-            console.log(`\n[Round ${round}] Step 5: Git upload...`);
             const tasksJson = JSON.stringify(tasks.map(t => ({ name: t.name, path: t.path })));
-            const gitResult = runMultiRoundHelper('git_upload', [
-                '--tasks-json', tasksJson,
-                '--round', String(round),
-                '--repo', GIT_REPO, '--branch', GIT_BRANCH, '--prefix', FOLDER_PREFIX
-            ]);
-            if (gitResult && gitResult.success) {
-                console.log(`  Git upload OK: ${(gitResult.data || []).length} tasks`);
-            } else {
-                console.log(`  Git upload failed: ${(gitResult && gitResult.error) || 'unknown'}`);
-            }
 
             // ---------- 步骤 6: 获取 trace ----------
             console.log(`\n[Round ${round}] Step 6: Getting traces...`);
@@ -737,6 +725,29 @@ async function main() {
                     '--tasks-json', tasksJson, '--round', String(round)
                 ]);
                 console.log(`  Filled: ${(dissResult && dissResult.data && dissResult.data.filled) || 0} tasks`);
+            }
+
+            // ---------- 步骤 8: Git 上传 ----------
+            console.log(`\n[Round ${round}] Step 8: Git upload after round completion...`);
+            const gitResult = runMultiRoundHelper('git_upload', [
+                '--tasks-json', tasksJson,
+                '--round', String(round),
+                '--repo', GIT_REPO, '--branch', GIT_BRANCH, '--prefix', FOLDER_PREFIX
+            ]);
+            const gitData = (gitResult && gitResult.data) || {};
+            const uploadedCount = Array.isArray(gitData.results)
+                ? gitData.results.length
+                : (Array.isArray(gitResult && gitResult.data) ? gitResult.data.length : 0);
+            const failedCount = Array.isArray(gitData.failures) ? gitData.failures.length : 0;
+            if (gitResult && gitResult.success) {
+                const suffix = failedCount ? `, ${failedCount} failed` : '';
+                console.log(`  Git upload OK: ${uploadedCount} tasks${suffix}`);
+            } else {
+                const suffix = failedCount ? ` (${failedCount} task failures)` : '';
+                console.log(`  Git upload failed: ${(gitResult && gitResult.error) || 'unknown'}${suffix}`);
+            }
+            if (failedCount) {
+                console.log(`  Git failed tasks: ${gitData.failures.map(f => `${f.task_name}: ${f.error}`).join('; ')}`);
             }
 
             // ---------- 步骤 9: 生成下一轮提示词 ----------

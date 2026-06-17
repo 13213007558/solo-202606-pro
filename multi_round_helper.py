@@ -137,6 +137,11 @@ def action_git_upload(args):
         return ignored
 
     results = []
+    failures = []
+
+    def add_failure(task_name, error):
+        failures.append({"task_name": task_name, "error": error})
+
     for task in tasks:
         task_name = task['name']
         task_path = task['path']
@@ -149,10 +154,28 @@ def action_git_upload(args):
 
         ok, _, err = run_git(['git', 'add', '--', folder_name])
         if not ok:
-            return {"success": False, "error": f"git add failed for {task_name}: {err}"}
+            add_failure(task_name, f"git add failed: {err.strip()}")
+            continue
 
         ok, _, _ = run_git(['git', 'diff', '--cached', '--quiet', '--', folder_name])
         if ok:
+            head_ok, head_out, head_err = run_git(
+                ['git', 'ls-tree', '-r', '--name-only', 'HEAD', '--', folder_name]
+            )
+            head_paths = [line.strip() for line in head_out.splitlines() if line.strip()]
+            if not head_ok or not any(
+                path == folder_name or path.startswith(folder_name + '/')
+                for path in head_paths
+            ):
+                add_failure(
+                    task_name,
+                    (
+                        f"No uploadable tracked files for {folder_name}; "
+                        f"empty commit would not contain the folder. {head_err.strip()}"
+                    ).strip()
+                )
+                continue
+
             msg = (
                 f"Round {round_num}: Record unchanged {task_name} "
                 f"as {folder_name}"
@@ -161,20 +184,16 @@ def action_git_upload(args):
                 ['git', 'commit', '--allow-empty', '-m', msg]
             )
             if not commit_ok:
-                return {
-                    "success": False,
-                    "error": (
-                        f"Empty commit failed for unchanged task {task_name}: "
-                        f"{commit_err.strip()}"
-                    )
-                }
+                add_failure(
+                    task_name,
+                    f"Empty commit failed for unchanged task: {commit_err.strip()}"
+                )
+                continue
             ok2, out2, err2 = run_git(['git', 'rev-parse', 'HEAD'])
             commit_id = out2.strip() if ok2 else ''
             if not commit_id:
-                return {
-                    "success": False,
-                    "error": f"Could not read commit ID for {task_name}: {err2.strip()}"
-                }
+                add_failure(task_name, f"Could not read commit ID: {err2.strip()}")
+                continue
         else:
             msg = f"Round {round_num}: Upload {task_name} as {folder_name}"
             before_ok, before_out, _ = run_git(['git', 'rev-parse', 'HEAD'])
@@ -183,17 +202,16 @@ def action_git_upload(args):
                 ['git', 'commit', '-m', msg]
             )
             if not commit_ok:
-                return {
-                    "success": False,
-                    "error": f"Commit failed for {task_name}: {commit_err.strip()}"
-                }
+                add_failure(task_name, f"Commit failed: {commit_err.strip()}")
+                continue
             ok2, out2, err2 = run_git(['git', 'rev-parse', 'HEAD'])
             commit_id = out2.strip() if ok2 else ''
             if not commit_id or commit_id == before_commit:
-                return {
-                    "success": False,
-                    "error": f"Git did not create a new commit for {task_name}: {err2.strip()}"
-                }
+                add_failure(
+                    task_name,
+                    f"Git did not create a new commit: {err2.strip()}"
+                )
+                continue
 
         verify_ok, verify_out, verify_err = run_git(
             ['git', 'ls-tree', '-r', '--name-only', commit_id, '--', folder_name]
@@ -203,13 +221,14 @@ def action_git_upload(args):
             path == folder_name or path.startswith(folder_name + '/')
             for path in tree_paths
         ):
-            return {
-                "success": False,
-                "error": (
-                    f"Commit verification failed for {task_name}; commit {commit_id} "
+            add_failure(
+                task_name,
+                (
+                    f"Commit verification failed; commit {commit_id} "
                     f"does not contain {folder_name}. {verify_err.strip()}"
-                )
-            }
+                ).strip()
+            )
+            continue
 
         github_url = repo.replace('.git', '')
         results.append({
@@ -224,14 +243,21 @@ def action_git_upload(args):
         commit_id = result["commit_id"]
         previous_task = commit_owners.get(commit_id)
         if previous_task:
-            return {
-                "success": False,
-                "error": (
+            add_failure(
+                result['task_name'],
+                (
                     f"Duplicate commit ID detected in the same batch: "
                     f"{previous_task} and {result['task_name']} both use {commit_id}"
                 )
-            }
+            )
         commit_owners[commit_id] = result["task_name"]
+
+    if not results:
+        return {
+            "success": False,
+            "error": "No tasks were uploaded",
+            "data": {"results": results, "failures": failures}
+        }
 
     # Push
     push_ok = False
@@ -247,7 +273,11 @@ def action_git_upload(args):
         else:
             time.sleep(3)
     if not push_ok:
-        return {"success": False, "error": f"Git push failed: {push_error.strip()}"}
+        return {
+            "success": False,
+            "error": f"Git push failed: {push_error.strip()}",
+            "data": {"results": results, "failures": failures}
+        }
 
     # 保存到 result 文件
     for r in results:
@@ -262,7 +292,7 @@ def action_git_upload(args):
             set_round_data(result_data, round_num, rd)
             save_result(task_path, task_name, result_data)
 
-    return {"success": True, "data": results}
+    return {"success": True, "data": {"results": results, "failures": failures}}
 
 
 # ============================================================
