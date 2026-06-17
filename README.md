@@ -49,6 +49,7 @@ python generate.py -n 100
 ### 4. 启动多轮自动化
 
 ```powershell
+//建议每轮对话1200s(20分钟),最近模型响应有点慢或者模型会出现请求失败的情况
 node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 8
 ```
 
@@ -102,7 +103,7 @@ node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-second
 |------|--------|------|
 | `--rounds` | 3 | 总对话轮数 |
 | `--batch-size` | 8 | 每批并发窗口数 |
-| `--wait-seconds` | 600 | 每轮等待 AI 响应时间（秒） |
+| `--wait-seconds` | 1200 | 每轮等待 AI 响应时间（秒） |
 | `--switch-interval` | 15 | 窗口轮询切换间隔（秒） |
 | `--stop-dwell` | 10 | Stop 按钮检测停留时间（秒） |
 | `--upload-timeout` | 10 | Git 上传超时（秒） |
