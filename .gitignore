@@ -7,7 +7,7 @@
 /example/*
 !/example/.gitkeep
 *.xlsx
-
+.npm-cache/
 /config.json
 
 /docs/
