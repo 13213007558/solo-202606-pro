@@ -199,32 +199,18 @@ export class AssetLoader {
   private generateExplosionTexture(g: Phaser.GameObjects.Graphics): void {
     g.clear();
 
-    const frames: Phaser.Types.Textures.GenerateTextureFrameConfig[] = [];
-    const numFrames = 8;
+    const radius = 40;
 
-    for (let i = 0; i < numFrames; i++) {
-      const progress = i / (numFrames - 1);
-      const radius = 10 + progress * 30;
-      const alpha = 1 - progress * 0.7;
+    g.fillStyle(0xff0000, 0.5);
+    g.fillCircle(radius, radius, radius);
+    g.fillStyle(0xff8800, 0.8);
+    g.fillCircle(radius, radius, radius * 0.8);
+    g.fillStyle(0xffff00, 1);
+    g.fillCircle(radius, radius, radius * 0.5);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(radius, radius, radius * 0.2);
 
-      g.clear();
-      g.fillStyle(0xffff00, alpha);
-      g.fillCircle(0, 0, radius * 0.5);
-      g.fillStyle(0xff8800, alpha * 0.8);
-      g.fillCircle(0, 0, radius * 0.8);
-      g.fillStyle(0xff0000, alpha * 0.5);
-      g.fillCircle(0, 0, radius);
-
-      frames.push({
-        key: `explosion_frame_${i}`,
-        x: -radius - 2,
-        y: -radius - 2,
-        width: (radius + 2) * 2,
-        height: (radius + 2) * 2
-      });
-    }
-
-    g.generateTexture(ASSET_KEYS.EXPLOSION, 90, 90);
+    g.generateTexture(ASSET_KEYS.EXPLOSION, radius * 2, radius * 2);
   }
 
   private generateParticleTexture(g: Phaser.GameObjects.Graphics): void {

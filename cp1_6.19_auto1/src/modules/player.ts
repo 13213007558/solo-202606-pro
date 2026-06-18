@@ -21,7 +21,9 @@ export class Player {
   private shootKey!: Phaser.Input.Keyboard.Key;
   private shootTimer: number = 0;
   private isShooting: boolean = false;
+  private shootBlocked: boolean = false;
   private blinkTimer: number = 0;
+  private thrusterPaused: boolean = false;
   private thrusterParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
   private onShootCallback: (x: number, y: number, level: PowerUpLevel) => void;
 
@@ -64,7 +66,7 @@ export class Player {
   }
 
   private setupThrusterParticles(): void {
-    const particles = this.scene.add.particles(0, 0, ASSET_KEYS.PARTICLE, {
+    this.thrusterParticles = this.scene.add.particles(0, 0, ASSET_KEYS.PARTICLE, {
       lifespan: 400,
       speed: { min: 50, max: 100 },
       angle: { min: 80, max: 100 },
@@ -76,8 +78,7 @@ export class Player {
       follow: this.sprite,
       followOffset: { x: 0, y: 18 }
     });
-    particles.setDepth(9);
-    this.thrusterParticles = particles.emitters.first;
+    this.thrusterParticles.setDepth(9);
   }
 
   public update(time: number, delta: number): void {
@@ -85,6 +86,19 @@ export class Player {
     this.handleShooting(delta);
     this.updateInvincibility(delta);
     this.updateThruster();
+  }
+
+  public setPaused(paused: boolean): void {
+    if (paused) {
+      this.thrusterParticles.pause();
+      this.thrusterPaused = true;
+      this.isShooting = false;
+    } else {
+      this.thrusterParticles.resume();
+      this.thrusterPaused = false;
+      this.shootBlocked = true;
+      this.isShooting = false;
+    }
   }
 
   private handleMovement(delta: number): void {
@@ -132,7 +146,16 @@ export class Player {
       return;
     }
 
-    this.isShooting = this.shootKey.isDown;
+    const isDown = this.shootKey.isDown;
+
+    if (this.shootBlocked) {
+      if (!isDown) {
+        this.shootBlocked = false;
+      }
+      this.isShooting = false;
+    } else {
+      this.isShooting = isDown;
+    }
 
     if (this.shootTimer > 0) {
       this.shootTimer -= delta;
@@ -168,8 +191,16 @@ export class Player {
   private updateThruster(): void {
     const state = stateManager.getState();
     if (state.isGameOver) {
-      this.thrusterParticles.on = false;
+      if (!this.thrusterPaused) {
+        this.thrusterParticles.pause();
+        this.thrusterPaused = true;
+      }
       return;
+    }
+
+    if (this.thrusterPaused) {
+      this.thrusterParticles.resume();
+      this.thrusterPaused = false;
     }
 
     const speed = Math.hypot(this.body.velocity.x, this.body.velocity.y);
@@ -189,7 +220,7 @@ export class Player {
   }
 
   public destroy(): void {
-    this.thrusterParticles.remove();
+    this.thrusterParticles.destroy();
     this.sprite.destroy();
   }
 }

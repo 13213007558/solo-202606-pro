@@ -57,6 +57,34 @@ class GameScene extends Phaser.Scene {
     this.hud.showStartMenu(() => this.startGame());
 
     this.setupCollisionCallbacks();
+    this.setupPauseInput();
+  }
+
+  private setupPauseInput(): void {
+    const input = this.input.keyboard;
+    if (!input) return;
+
+    input.on('keydown-ESC', () => this.togglePause());
+    input.on('keydown-P', () => this.togglePause());
+  }
+
+  private togglePause(): void {
+    const state = stateManager.getState();
+    if (!this.gameStarted || state.isGameOver) return;
+
+    if (state.isPaused) {
+      stateManager.setPaused(false);
+      this.physics.world.resume();
+      this.tweens.resumeAll();
+      this.player.setPaused(false);
+      this.hud.hidePauseOverlay();
+    } else {
+      stateManager.setPaused(true);
+      this.physics.world.pause();
+      this.tweens.pauseAll();
+      this.player.setPaused(true);
+      this.hud.showPauseOverlay();
+    }
   }
 
   private setupCollisionCallbacks(): void {

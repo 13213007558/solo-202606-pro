@@ -13,6 +13,9 @@ export class HUD {
   private energyBarText!: Phaser.GameObjects.Text;
   private panelBg!: Phaser.GameObjects.Graphics;
   private waveText!: Phaser.GameObjects.Text;
+  private pauseOverlay?: Phaser.GameObjects.Graphics;
+  private pauseText?: Phaser.GameObjects.Text;
+  private pauseSubText?: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -415,7 +418,11 @@ export class HUD {
         scale: 1.05,
         duration: 150
       });
-      bg.tint = Phaser.Display.Color.IntegerToColor(color).darken(20).color;
+      this.scene.tweens.add({
+        targets: bg,
+        alpha: 0.8,
+        duration: 150
+      });
     });
 
     btn.on('pointerout', () => {
@@ -424,7 +431,11 @@ export class HUD {
         scale: 1,
         duration: 150
       });
-      bg.clearTint();
+      this.scene.tweens.add({
+        targets: bg,
+        alpha: 1,
+        duration: 150
+      });
     });
 
     btn.on('pointerdown', () => {
@@ -440,7 +451,67 @@ export class HUD {
     return btn;
   }
 
+  public showPauseOverlay(): void {
+    if (this.pauseOverlay) return;
+
+    const w = this.scene.scale.width;
+    const h = this.scene.scale.height;
+
+    this.pauseOverlay = this.scene.add.graphics();
+    this.pauseOverlay.fillStyle(0x000000, 0.6);
+    this.pauseOverlay.fillRect(0, 0, w, h);
+    this.pauseOverlay.setDepth(150);
+    this.pauseOverlay.setScrollFactor(0);
+
+    this.pauseText = this.scene.add.text(
+      w / 2,
+      h / 2 - 20,
+      '暂停中',
+      {
+        fontFamily: 'Arial',
+        fontSize: '48px',
+        color: '#ffffff',
+        fontStyle: 'bold'
+      }
+    );
+    this.pauseText.setOrigin(0.5);
+    this.pauseText.setShadow(4, 4, '#000000', 6, true, true);
+    this.pauseText.setDepth(151);
+    this.pauseText.setScrollFactor(0);
+
+    this.pauseSubText = this.scene.add.text(
+      w / 2,
+      h / 2 + 30,
+      '按 ESC 继续',
+      {
+        fontFamily: 'Arial',
+        fontSize: '24px',
+        color: '#ffffff'
+      }
+    );
+    this.pauseSubText.setOrigin(0.5);
+    this.pauseSubText.setShadow(3, 3, '#000000', 5, true, true);
+    this.pauseSubText.setDepth(151);
+    this.pauseSubText.setScrollFactor(0);
+  }
+
+  public hidePauseOverlay(): void {
+    if (this.pauseOverlay) {
+      this.pauseOverlay.destroy();
+      this.pauseOverlay = undefined;
+    }
+    if (this.pauseText) {
+      this.pauseText.destroy();
+      this.pauseText = undefined;
+    }
+    if (this.pauseSubText) {
+      this.pauseSubText.destroy();
+      this.pauseSubText = undefined;
+    }
+  }
+
   public destroy(): void {
+    this.hidePauseOverlay();
     this.container.destroy();
     this.waveText.destroy();
   }

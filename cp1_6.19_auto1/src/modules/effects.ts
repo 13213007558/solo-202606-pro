@@ -9,7 +9,6 @@ export class EffectsManager {
   private starLayers: { stars: Phaser.GameObjects.Graphics; speed: number }[] = [];
   private nebulaTween!: Phaser.Tweens.Tween;
   private nebulaColor: number = 0x0a0a2e;
-  private particlePool: Phaser.GameObjects.Particles.ParticleEmitterManager[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -259,7 +258,7 @@ export class EffectsManager {
   }
 
   public destroy(): void {
-    this.particlePool.forEach((p) => p.destroy());
-    this.particlePool = [];
+    this.starLayers.forEach((layer) => layer.stars.destroy());
+    this.starLayers = [];
   }
 }
