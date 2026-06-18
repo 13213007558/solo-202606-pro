@@ -78,11 +78,11 @@ const CollectionItem = memo(function CollectionItem({
       <div className="collection-actions">
         <button
           type="button"
-          className="action-btn edit"
+          className="action-btn apply"
           onClick={() => onApply(cloneConfig(item.config))}
-          aria-label="编辑"
+          aria-label="应用"
         >
-          编辑
+          应用
         </button>
         <button
           type="button"

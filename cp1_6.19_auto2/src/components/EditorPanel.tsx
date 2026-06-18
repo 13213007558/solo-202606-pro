@@ -191,14 +191,20 @@ export default function EditorPanel({ config, onChange }: EditorPanelProps) {
         </label>
         <div className="gradient-bar" ref={barRef} style={{ background: gradientCss }}>
           {config.stops.map((stop) => (
-            <button
-              type="button"
+            <div
               key={stop.id}
-              className={`color-stop ${openStopId === stop.id ? 'is-active' : ''} ${draggingId === stop.id ? 'is-dragging' : ''}`}
-              style={{ left: `${stop.position}%`, backgroundColor: stop.color }}
-              onPointerDown={(e) => startDrag(e, stop)}
-              aria-label={`颜色节点 ${stop.color} 位置 ${stop.position}%`}
-            />
+              className={`stop-wrapper ${openStopId === stop.id ? 'is-active' : ''} ${draggingId === stop.id ? 'is-dragging' : ''}`}
+              style={{ left: `${stop.position}%` }}
+            >
+              <span className="stop-label">{stop.position}%</span>
+              <button
+                type="button"
+                className={`color-stop ${openStopId === stop.id ? 'is-active' : ''} ${draggingId === stop.id ? 'is-dragging' : ''}`}
+                style={{ backgroundColor: stop.color }}
+                onPointerDown={(e) => startDrag(e, stop)}
+                aria-label={`颜色节点 ${stop.color} 位置 ${stop.position}%`}
+              />
+            </div>
           ))}
         </div>
 

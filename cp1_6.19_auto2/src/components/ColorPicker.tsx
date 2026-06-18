@@ -23,6 +23,7 @@ export default function ColorPicker({ color, onChange, onClose }: ColorPickerPro
   const [h, setH] = useState(initial.h)
   const [s, setS] = useState(initial.s)
   const [v, setV] = useState(initial.v)
+  const [quickInput, setQuickInput] = useState('')
 
   const panelRef = useRef<HTMLDivElement>(null)
   const hueRef = useRef<HTMLDivElement>(null)
@@ -127,6 +128,67 @@ export default function ColorPicker({ color, onChange, onClose }: ColorPickerPro
     onChange(rgbToHex(nr.r, nr.g, nr.b))
   }
 
+  const parseQuickInput = (value: string): string | null => {
+    const clean = value.trim()
+    if (!clean) return null
+
+    // HEX: #fff, #ffffff, fff, ffffff
+    const hexMatch = clean.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+    if (hexMatch) {
+      let hex = hexMatch[1]
+      if (hex.length === 3) {
+        hex = hex.split('').map((c) => c + c).join('')
+      }
+      return `#${hex.toLowerCase()}`
+    }
+
+    // RGB: rgb(255, 0, 0), 255,0,0, 255 0 0
+    const rgbMatch = clean.match(
+      /^rgba?\s*\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})/i,
+    )
+    const rgbShorthand = clean.match(/^(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})$/)
+    if (rgbMatch || rgbShorthand) {
+      const m = rgbMatch || rgbShorthand
+      if (m) {
+        const r = clamp(Number(m[1]), 0, 255)
+        const g = clamp(Number(m[2]), 0, 255)
+        const b = clamp(Number(m[3]), 0, 255)
+        return rgbToHex(r, g, b)
+      }
+    }
+
+    // HSL: hsl(120, 50%, 50%), 120,50,50, 120 50% 50%
+    const hslMatch = clean.match(
+      /^hsla?\s*\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})%?\s*[, ]\s*(\d{1,3})%?/i,
+    )
+    const hslShorthand = clean.match(/^(\d{1,3})\s*[, ]\s*(\d{1,3})%?\s*[, ]\s*(\d{1,3})%?$/)
+    if (hslMatch || hslShorthand) {
+      const m = hslMatch || hslShorthand
+      if (m) {
+        const hue = clamp(Number(m[1]), 0, 360)
+        const sat = clamp(Number(m[2]), 0, 100)
+        const light = clamp(Number(m[3]), 0, 100)
+        const rgb = hslToRgb(hue, sat, light)
+        return rgbToHex(rgb.r, rgb.g, rgb.b)
+      }
+    }
+
+    return null
+  }
+
+  const handleQuickInput = (value: string) => {
+    setQuickInput(value)
+    const parsed = parseQuickInput(value)
+    if (parsed) {
+      const parsedRgb = hexToRgb(parsed)
+      const hsv = rgbToHsv(parsedRgb)
+      setH(hsv.h)
+      setS(hsv.s)
+      setV(hsv.v)
+      onChange(parsed)
+    }
+  }
+
   const hexValue = rgbToHex(rgb.r, rgb.g, rgb.b).replace('#', '')
 
   return (
@@ -136,6 +198,19 @@ export default function ColorPicker({ color, onChange, onClose }: ColorPickerPro
         <button className="cp-close" onClick={onClose} aria-label="关闭">
           ×
         </button>
+      </div>
+
+      <div className="cp-quick-input">
+        <span className="cp-quick-label">快速输入</span>
+        <input
+          type="text"
+          className="cp-quick-field"
+          placeholder="#ff6b6b · rgb(255,107,107) · hsl(0,100%,71%)"
+          value={quickInput}
+          onChange={(e) => handleQuickInput(e.target.value)}
+          spellCheck={false}
+        />
+        <span className="cp-quick-hint">支持 HEX、RGB、HSL 格式</span>
       </div>
 
       <div
