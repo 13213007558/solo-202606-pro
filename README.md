@@ -1,61 +1,94 @@
-# 当前脚本还存在一些问题，我会不断修复,如果遇到一些问题,可以私信我一下，我不断改进.
+# Solo Trae 多轮自动化
+
+这个项目现在支持 Windows 和 macOS。当前 Mac M2 推荐按下面的 macOS 流程配置，窗口控制会走 `osascript`，截图和点击仍由 `pyautogui` 完成。
 
 ## 环境要求
 
 | 依赖 | 说明 |
 |------|------|
-| [Anaconda](https://www.anaconda.com/) | Python 环境管理（[安装教程](https://www.csdn.net/)） |
-| [Node.js](https://nodejs.org/) | 运行自动化主流程 |
-| [Git Bash](https://git-scm.com/) | 版本控制与代码上传 |
-| [Trae CN](https://www.trae.com.cn/) | 被测 AI 编程工具 |
+| Python 3.10+ arm64 | M2 上建议使用系统 Python、Homebrew Python、Miniforge 或 uv 创建原生 arm64 环境 |
+| Node.js 18+ arm64 | 运行自动化主流程 |
+| Git | 上传生成项目 |
+| Trae CN | 被测 AI 编程工具 |
 
-## 快速开始
+确认当前架构：
 
-### 1. 创建 Conda 环境
+```bash
+uname -m
+node -v
+python3 -V
+```
 
-```powershell
-conda create -n project python=3.10
-conda activate project
+`uname -m` 应输出 `arm64`。如果 Python 或 Node 是 x86_64 版本，建议换成 arm64 版本后再安装依赖。
+
+## macOS 快速开始
+
+### 1. 创建 Python 环境
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
-### 2. 配置 config.json
+### 2. 配置 macOS 权限
 
-**先把config_example修改为config.json**
+自动化需要系统权限，否则可能无法截图、找图或发送按键。
 
-需修改以下 **4 项**：
+打开 `系统设置 -> 隐私与安全性`，给你运行脚本的应用授权：
 
-| 配置项 | 路径 | 说明 |
-|--------|------|------|
-| Trae CN 路径 | `paths.trae_executable` | 本机 Trae CN 启动文件路径，如 `C:\\Users\\xxx\\AppData\\Local\\Trae CN\\bin\\trae-cn.cmd` |
-| Python 路径 | `paths.python_executable` | Anaconda 环境中的 python.exe 路径 |
-| DeepSeek API Key | `deepseek.api_key` | 在 [platform.deepseek.com](https://platform.deepseek.com) 获取 |
-| GitHub 仓库地址 | `github.repository` | 上传生成项目的仓库 URL，如 `https://github.com/username/repo.git` |
+| 权限 | 常见需要加入的应用 |
+|------|--------------------|
+| 辅助功能 | Codex、Terminal、iTerm、VS Code、Python、osascript |
+| 屏幕录制 | Codex、Terminal、iTerm、VS Code、Python |
 
-> 其余参数均有默认值，无需修改即可运行。完整配置说明见 `config.json` 中的注释。
+授权后最好重启终端或 Codex。
 
-### 3. 生成首轮提示词
+### 3. 配置 config.json
 
-```powershell
-conda activate project
+```bash
+cp config_example.json config.json
+```
+
+至少修改这几项：
+
+| 配置项 | macOS 示例 | 说明 |
+|--------|------------|------|
+| `paths.trae_executable` | `/usr/local/bin/trae-cn` | 本机已验证的 Trae CN CLI 路径，备选 `/opt/homebrew/bin/trae-cn` 或 `/Applications/Trae CN.app` |
+| `paths.trae_app_name` | `Trae CN` | AppleScript 查找窗口的进程名 |
+| `paths.python_executable` | `/Users/apple/miniconda3/bin/python3` | 本机已验证的 arm64 Python；也可换成 `/Users/apple/Documents/solo/demo-Solo/.venv/bin/python` |
+| `deepseek.api_key` | `sk-...` | DeepSeek API Key |
+| `github.repository` | `https://github.com/username/repo.git` | 上传生成项目的仓库 |
+
+如果 Trae 在系统里显示为 `Trae` 而不是 `Trae CN`，把 `paths.trae_app_name` 改成 `Trae`。
+
+### 4. 生成首轮提示词
+
+```bash
+source .venv/bin/activate
 python generate.py -n 100
 ```
 
-- `-n` 指定生成数量，提示词保存在 `example/` 目录下
-- 默认使用 DeepSeek API 生成，覆盖游戏开发、3D/交互可视化、Web 前端、全栈 Web 应用四个领域
+提示词会保存在 `example/` 目录下。
 
-### 4. 启动多轮自动化
+### 5. 检查 Trae 窗口识别
 
-```powershell
-//建议每轮对话1200s(20分钟),最近模型响应有点慢或者模型会出现请求失败的情况
-node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 8
+先手动打开一次 Trae，然后运行：
+
+```bash
+node list_windows.js
 ```
 
-| 参数 | 说明 |
-|------|------|
-| `--rounds` | 对话轮数 |
-| `--wait-seconds` | 每轮等待 AI 响应的时间（秒） |
-| `--batch-size` | 同时打开的 Trae CN 窗口数 |
+如果没有列出窗口，优先检查 `paths.trae_app_name` 和 macOS 辅助功能权限。
+
+### 6. 启动多轮自动化
+
+```bash
+node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 4
+```
+
+M2 上建议先把 `--batch-size` 设为 `2` 或 `4` 试跑，确认窗口识别、截图匹配和系统权限都正常后再提高并发。
 
 ## 运行模式
 
@@ -65,84 +98,53 @@ node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 8
 | 手动确认 | `node run_multi_round.js` | 启动前需输入 Y 确认 |
 | 定时执行 | `node schedule_run.js 22:00` | 在指定时间自动启动 |
 
-定时执行示例——凌晨 00:00 运行：
+定时执行示例：
 
-```powershell
-node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 8
+```bash
+node schedule_run.js 00:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 1200 --batch-size 4
 ```
 
 ## 每轮执行流程
 
-```
+```text
 第 N 轮
-  ├── 1. 发送提示词 + 获取 SessionID
-  ├── 2. 等待 AI 响应 + 自动点击对话框按钮
-  ├── 3. Stop 检测
-  ├── 4. Git 上传代码
-  ├── 5. 获取 Trace（执行轨迹）
-  ├── 6. 清理 Trace 异常信息
-  ├── 7. 生成不满意原因
-  └── 8. 生成下一轮提示词（Bug修复 / Feature迭代）
+  1. 发送提示词并获取 SessionID
+  2. 等待 AI 响应并自动点击对话框按钮
+  3. 检测 Stop 按钮
+  4. 获取 Trace
+  5. 生成不满意原因
+  6. Git 上传代码
+  7. 生成下一轮提示词
 
-最终 → 导出 multi_round_results.xlsx
+最终导出 multi_round_results.xlsx
 ```
 
 ## 输出文件
 
 | 文件 | 说明 |
 |------|------|
-| `tasks/autoN/` | 每个任务的工作目录（提示词 + 生成代码 + 结果） |
-| `tasks/autoN/result_autoN.json` | 单任务详细数据（SessionID、Trace、不满意原因等） |
-| `multi_round_results.xlsx` | 所有任务的汇总 Excel 表 |
+| `tasks/autoN/` | 每个任务的工作目录 |
+| `tasks/autoN/result_autoN.json` | 单任务详细数据 |
+| `multi_round_results.xlsx` | 所有任务的汇总 Excel |
+| `log/` | 运行日志 |
 
-## 命令行参数一览
+## 常见问题
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `--rounds` | 3 | 总对话轮数 |
-| `--batch-size` | 8 | 每批并发窗口数 |
-| `--wait-seconds` | 1200 | 每轮等待 AI 响应时间（秒） |
-| `--switch-interval` | 15 | 窗口轮询切换间隔（秒） |
-| `--stop-dwell` | 10 | Stop 按钮检测停留时间（秒） |
-| `--upload-timeout` | 10 | Git 上传超时（秒） |
-| `--trace-timeout` | 10 | Trace 获取超时（秒） |
-| `--prompt-gen-time` | 60 | 下一轮提示词生成等待时间（秒） |
+| 现象 | 处理 |
+|------|------|
+| 找不到窗口 | 运行 `node list_windows.js`，检查 `paths.trae_app_name` 是否匹配 |
+| 无法截图或找不到按钮 | 检查屏幕录制权限，确认 Trae 窗口在当前桌面且没有被遮挡 |
+| 无法粘贴或发送按键 | 检查辅助功能权限 |
+| `pyautogui` 导入或启动卡住 | 从已授权的前台 Terminal/iTerm 运行，授权后重启终端；不要从无 GUI 权限的后台会话直接跑 |
+| `opencv-python` 安装失败 | 先升级 `pip setuptools wheel`，并确认 Python 是 arm64 |
+| SessionID 或 Trace 获取失败 | 重新截取 `images/` 里的按钮素材，macOS Retina 屏幕缩放可能影响图像匹配 |
 
-## 项目结构
+## Git 代理配置
 
-```
-SoloDemo/
-├── config.json              # 运行配置（含注释说明）
-├── app_config.js            # Node.js 配置加载模块
-├── config_loader.py         # Python 配置加载模块
-├── generate.py              # 首轮提示词生成
-├── run_multi_round.js       # 多轮自动化主流程（手动确认）
-├── run_multi_round_auto.js  # 多轮自动化主流程（全自动）
-├── schedule_run.js          # 定时任务启动器
-├── multi_round_helper.py    # Git上传/Trace清理/不满意原因/提示词生成
-├── trae_helper.py           # Trae 窗口自动化（屏幕识别+点击）
-├── runtime_logger.js        # 运行日志记录
-├── process_xlsx.py          # Excel 结果后处理
-├── get_coordinates.py       # 坐标获取工具
-├── list_windows.js          # 窗口列表工具
-├── requirements.txt         # Python 依赖
-├── images/                  # 屏幕识别截图素材
-├── example/                 # 生成的提示词存放目录
-├── tasks/                   # 任务工作目录
-└── log/                     # 运行日志
-```
-
-
-
-## 代理配置
-
-```
-# 查看 HTTP/HTTPS 代理
+```bash
 git config --global --get http.proxy
 git config --global --get https.proxy
 
-# 设置代理（假设代理运行在 127.0.0.1:7890）
 git config --global http.proxy http://127.0.0.1:7890
 git config --global https.proxy http://127.0.0.1:7890
-
 ```

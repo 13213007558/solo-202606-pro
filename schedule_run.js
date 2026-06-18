@@ -1,9 +1,9 @@
-const { execSync, spawn } = require('child_process');
+const { spawn } = require('child_process');
 
 const args = process.argv.slice(2);
 if (args.length < 1) {
     console.log('Usage: node schedule_run.js 22:00 [command args...]');
-    console.log('Example: node schedule_run.js 22:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 600 --batch-size 8');
+    console.log('Example: node schedule_run.js 22:00 node run_multi_round_auto.js --rounds 3 --wait-seconds 600 --batch-size 4');
     process.exit(1);
 }
 
@@ -11,7 +11,7 @@ const timeStr = args[0];
 const cmdArgs = args.slice(1);
 
 if (!cmdArgs.length) {
-    cmdArgs.push('node', 'run_multi_round_auto.js', '--rounds', '3', '--wait-seconds', '600', '--batch-size', '8');
+    cmdArgs.push('node', 'run_multi_round_auto.js', '--rounds', '3', '--wait-seconds', '600', '--batch-size', '4');
 }
 
 const [hours, minutes] = timeStr.split(':').map(Number);
@@ -57,7 +57,7 @@ setTimeout(() => {
     const child = spawn(cmdArgs[0], cmdArgs.slice(1), {
         cwd: __dirname,
         stdio: 'inherit',
-        shell: true
+        shell: process.platform === 'win32'
     });
 
     child.on('exit', (code) => {

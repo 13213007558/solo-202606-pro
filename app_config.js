@@ -1,4 +1,5 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const BASE_DIR = __dirname;
@@ -7,7 +8,7 @@ const CONFIG_PATH = path.join(BASE_DIR, 'config.json');
 function loadConfig() {
     if (!fs.existsSync(CONFIG_PATH)) {
         throw new Error(
-            `Missing ${CONFIG_PATH}. Copy config.example.json to config.json and configure it.`
+            `Missing ${CONFIG_PATH}. Copy config_example.json to config.json and configure it.`
         );
     }
 
@@ -80,7 +81,14 @@ function getConfig(section, key, fallback) {
 }
 
 function resolveConfigPath(section, key, fallback) {
-    return path.resolve(BASE_DIR, getConfig(section, key, fallback));
+    const rawValue = String(getConfig(section, key, fallback));
+    let value = rawValue;
+    if (rawValue === '~') {
+        value = os.homedir();
+    } else if (rawValue.startsWith('~/') || rawValue.startsWith('~\\')) {
+        value = path.join(os.homedir(), rawValue.slice(2));
+    }
+    return path.resolve(BASE_DIR, value);
 }
 
 function validateProbability(value, name) {

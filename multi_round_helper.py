@@ -112,12 +112,36 @@ def action_git_upload(args):
         if not ok:
             return {"success": False, "error": f"Clone failed: {err}"}
 
-    ok, _, err = run_git(['git', 'checkout', branch])
+    def has_head_commit():
+        ok, _, _ = run_git(['git', 'rev-parse', '--verify', 'HEAD'])
+        return ok
+
+    def checkout_upload_branch():
+        ok, _, err = run_git(['git', 'checkout', branch])
+        if ok:
+            return True, ''
+
+        remote_ok, _, _ = run_git(
+            ['git', 'rev-parse', '--verify', f'origin/{branch}']
+        )
+        if remote_ok:
+            ok, _, err = run_git(
+                ['git', 'checkout', '-B', branch, f'origin/{branch}']
+            )
+            return (True, '') if ok else (False, err)
+
+        ok, _, err = run_git(['git', 'checkout', '-B', branch])
+        if ok:
+            return True, ''
+        return False, err
+
+    ok, err = checkout_upload_branch()
     if not ok:
         return {"success": False, "error": f"Checkout failed: {err}"}
-    ok, _, err = run_git(['git', 'reset'])
-    if not ok:
-        return {"success": False, "error": f"Could not reset Git index: {err}"}
+    if has_head_commit():
+        ok, _, err = run_git(['git', 'reset'])
+        if not ok:
+            return {"success": False, "error": f"Could not reset Git index: {err}"}
 
     ignore_patterns = {'.git', 'node_modules', '__pycache__', 'dist', 'build', '.cache'}
     ignore_extensions = {'.log', '.pyc', '.pyo'}

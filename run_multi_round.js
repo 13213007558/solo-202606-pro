@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const readline = require('readline');
 const os = require('os');
 const {
@@ -10,6 +10,7 @@ const {
     validateProbability,
 } = require('./app_config');
 const { startRuntimeLogger } = require('./runtime_logger');
+const platform = require('./platform_helpers');
 
 const runtimeLogger = startRuntimeLogger({
     baseDir: __dirname,
@@ -29,7 +30,11 @@ function fmtTime(ms) {
 // CONFIG
 // ============================================================
 const TRAE_EXE = getConfig('paths', 'trae_executable', '');
-const PYTHON_EXE = getConfig('paths', 'python_executable', 'python');
+const TRAE_APP_NAME = platform.normalizeAppName(
+    TRAE_EXE,
+    getConfig('paths', 'trae_app_name', '')
+);
+const PYTHON_EXE = platform.expandHome(getConfig('paths', 'python_executable', 'python'));
 
 // 默认参数（可通过命令行覆盖）
 let ROUNDS = getConfig('automation', 'rounds', 3);
@@ -76,202 +81,40 @@ for (let i = 0; i < argv.length; i += 2) {
 const BASE_DIR = __dirname;
 const EXAMPLE_DIR = resolveConfigPath('paths', 'example_directory', 'example');
 const TASKS_DIR = resolveConfigPath('paths', 'tasks_directory', 'tasks');
+const TRAE_LAUNCH_TARGET = platform.IS_MACOS
+    ? platform.firstExistingMacTraeTarget(TRAE_EXE)
+    : TRAE_EXE;
+
+fs.mkdirSync(EXAMPLE_DIR, { recursive: true });
+fs.mkdirSync(TASKS_DIR, { recursive: true });
 
 // ============================================================
-// Win32 API (PowerShell)
+// Platform automation
 // ============================================================
-const ADD_TYPE_BLOCK = `
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-public class Win32 {
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool IsWindowVisible(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool BringWindowToTop(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")]
-    public static extern IntPtr PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-    public const int KEYEVENTF_KEYUP = 0x0002;
-    public const int VK_CONTROL = 0x11;
-    public const int VK_MENU = 0x12;
-    public const int VK_V = 0x56;
-    public const int VK_RETURN = 0x0D;
-    public static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
-    public static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
-    public const uint SWP_NOMOVE = 0x0002;
-    public const uint SWP_NOSIZE = 0x0001;
-    public const uint SWP_SHOWWINDOW = 0x0040;
-    public const int SW_MAXIMIZE = 3;
-    public const uint WM_CLOSE = 0x0010;
-    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-}
-"@
-`.trim();
-
-function runPS(script) {
-    const tmpFile = path.join(os.tmpdir(), 'trae_auto_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.ps1');
-    fs.writeFileSync(tmpFile, script, 'utf8');
-    let output = '';
-    try {
-        output = execSync(`powershell -ExecutionPolicy Bypass -File "${tmpFile}"`, {
-            encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 120000
-        });
-    } catch (e) { output = e.stdout || ''; }
-    try { fs.unlinkSync(tmpFile); } catch (e) {}
-    return output;
-}
-
 function findWindowHandle(targetName) {
-    const script = `
-${ADD_TYPE_BLOCK}
-$script:tName = "\\b${targetName}\\b"
-$script:found = [System.Collections.ArrayList]::new()
-$enumProc = [Win32+EnumWindowsProc]{
-    param($hWnd, $lParam)
-    if ([Win32]::IsWindowVisible($hWnd)) {
-        $tb = New-Object System.Text.StringBuilder(256)
-        [Win32]::GetWindowText($hWnd, $tb, $tb.Capacity) | Out-Null
-        $title = $tb.ToString()
-        if ($title -match $script:tName) { $script:found.Add($hWnd) | Out-Null }
-    }
-    return $true
-}
-[Win32]::EnumWindows($enumProc, [IntPtr]::Zero) | Out-Null
-if ($script:found.Count -gt 0) { Write-Host "HANDLE:$($script:found[0])" } else { Write-Host "HANDLE:NOT_FOUND" }
-`.trim();
-    const output = runPS(script);
-    const match = output.match(/HANDLE:(\d+)/);
-    return match ? match[1] : null;
+    return platform.findWindowHandle(targetName, { traeAppName: TRAE_APP_NAME });
 }
 
 function activateWindow(handleStr) {
-    const script = `
-${ADD_TYPE_BLOCK}
-$hWnd = [IntPtr]::new(${handleStr})
-[Win32]::SetWindowPos($hWnd, [Win32]::HWND_TOPMOST, 0, 0, 0, 0, [Win32]::SWP_NOMOVE -bor [Win32]::SWP_NOSIZE -bor [Win32]::SWP_SHOWWINDOW) | Out-Null
-Start-Sleep -Milliseconds 150
-[Win32]::ShowWindow($hWnd, [Win32]::SW_MAXIMIZE) | Out-Null
-Start-Sleep -Milliseconds 200
-[Win32]::BringWindowToTop($hWnd) | Out-Null
-Start-Sleep -Milliseconds 150
-[Win32]::SetForegroundWindow($hWnd) | Out-Null
-Start-Sleep -Milliseconds 400
-$fg = [Win32]::GetForegroundWindow()
-if ($fg -ne $hWnd) { [Win32]::SetForegroundWindow($hWnd) | Out-Null; Start-Sleep -Milliseconds 500 }
-[Win32]::SetWindowPos($hWnd, [Win32]::HWND_NOTOPMOST, 0, 0, 0, 0, [Win32]::SWP_NOMOVE -bor [Win32]::SWP_NOSIZE -bor [Win32]::SWP_SHOWWINDOW) | Out-Null
-Write-Host "ACTIVATED"
-`.trim();
-    const output = runPS(script);
-    return output.includes('ACTIVATED');
+    return platform.activateWindow(handleStr, { traeAppName: TRAE_APP_NAME });
 }
 
 function closeWindow(handleStr) {
-    const script = `
-${ADD_TYPE_BLOCK}
-$hWnd = [IntPtr]::new(${handleStr})
-[Win32]::PostMessage($hWnd, [Win32]::WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-Start-Sleep -Milliseconds 500
-Get-Process | Where-Object { $_.MainWindowHandle -eq $hWnd } | Stop-Process -Force
-Start-Sleep -Milliseconds 500
-Write-Host "CLOSED"
-`.trim();
-    runPS(script);
+    return platform.closeWindow(handleStr, { traeAppName: TRAE_APP_NAME });
 }
 
 function sendPrompt(handleStr, tempPromptFile) {
-    const script = `
-${ADD_TYPE_BLOCK}
-$hWnd = [IntPtr]::new(${handleStr})
-$promptFile = "${tempPromptFile}"
-$focusOk = $false
-for ($attempt = 1; $attempt -le 5; $attempt++) {
-    [Win32]::SetWindowPos($hWnd, [Win32]::HWND_TOPMOST, 0, 0, 0, 0, [Win32]::SWP_NOMOVE -bor [Win32]::SWP_NOSIZE -bor [Win32]::SWP_SHOWWINDOW) | Out-Null
-    Start-Sleep -Milliseconds 500
-    [Win32]::ShowWindow($hWnd, [Win32]::SW_MAXIMIZE) | Out-Null
-    Start-Sleep -Milliseconds 500
-    [Win32]::BringWindowToTop($hWnd) | Out-Null
-    Start-Sleep -Milliseconds 500
-    [Win32]::SetForegroundWindow($hWnd) | Out-Null
-    Start-Sleep -Milliseconds (1500 + $attempt * 500)
-    $fg = [Win32]::GetForegroundWindow()
-    if ($fg -eq $hWnd) { $focusOk = $true; break }
-    [Win32]::keybd_event([Win32]::VK_MENU, 0, 0, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 100
-    [Win32]::keybd_event([Win32]::VK_MENU, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 1000
-}
-if (-not $focusOk) {
-    Write-Host "FOCUS_FAILED"
-    [Win32]::SetWindowPos($hWnd, [Win32]::HWND_NOTOPMOST, 0, 0, 0, 0, [Win32]::SWP_NOMOVE -bor [Win32]::SWP_NOSIZE -bor [Win32]::SWP_SHOWWINDOW) | Out-Null
-    exit
-}
-$promptText = Get-Content -Path $promptFile -Raw -Encoding UTF8
-Set-Clipboard -Value $promptText
-Start-Sleep -Milliseconds 800
-$clipCheck = Get-Clipboard
-if (-not $clipCheck) { Set-Clipboard -Value $promptText; Start-Sleep -Milliseconds 800 }
-Start-Sleep -Milliseconds 500
-[Win32]::keybd_event([Win32]::VK_CONTROL, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 150
-[Win32]::keybd_event([Win32]::VK_V, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 150
-[Win32]::keybd_event([Win32]::VK_V, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 150
-[Win32]::keybd_event([Win32]::VK_CONTROL, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 3000
-[Win32]::keybd_event([Win32]::VK_CONTROL, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 150
-[Win32]::keybd_event([Win32]::VK_RETURN, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 150
-[Win32]::keybd_event([Win32]::VK_RETURN, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 150
-[Win32]::keybd_event([Win32]::VK_CONTROL, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 1000
-[Win32]::keybd_event([Win32]::VK_RETURN, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 300
-[Win32]::keybd_event([Win32]::VK_RETURN, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 1000
-[Win32]::keybd_event([Win32]::VK_RETURN, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 300
-[Win32]::keybd_event([Win32]::VK_RETURN, 0, [Win32]::KEYEVENTF_KEYUP, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 500
-[Win32]::SetWindowPos($hWnd, [Win32]::HWND_NOTOPMOST, 0, 0, 0, 0, [Win32]::SWP_NOMOVE -bor [Win32]::SWP_NOSIZE -bor [Win32]::SWP_SHOWWINDOW) | Out-Null
-Write-Host "DONE"
-`.trim();
-    const output = runPS(script);
-    return output.includes('DONE') && !output.includes('FOCUS_FAILED');
+    return platform.sendPrompt(handleStr, tempPromptFile, { traeAppName: TRAE_APP_NAME });
 }
 
 function runHelper(action, extraArgs = []) {
     const helperPath = path.join(__dirname, 'trae_helper.py');
     const args = [PYTHON_EXE, helperPath, '--action', action, ...extraArgs];
-    const cmd = args.map(a => `"${a}"`).join(' ');
     let output = '';
     try {
-        output = execSync(cmd, {
+        output = execFileSync(args[0], args.slice(1), {
             encoding: 'utf8', timeout: action === 'trace' ? 20000 : 120000,
-            stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 10 * 1024 * 1024, shell: true
+            stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 10 * 1024 * 1024
         });
     } catch (e) { output = e.stdout || ''; }
     const lines = output.trim().split(/\r?\n/).filter(l => l.trim());
@@ -286,7 +129,7 @@ function runHelper(action, extraArgs = []) {
 
 function runMultiRoundHelper(action, extraArgs = []) {
     const helperPath = path.join(__dirname, 'multi_round_helper.py');
-    // 将 --tasks-json 的值写入临时文件，避免 Windows 命令行引号问题
+    // 将 --tasks-json 的值写入临时文件，避免命令行长度和引号问题
     const processedArgs = [];
     for (let i = 0; i < extraArgs.length; i++) {
         if (extraArgs[i] === '--tasks-json' && i + 1 < extraArgs.length) {
@@ -299,12 +142,11 @@ function runMultiRoundHelper(action, extraArgs = []) {
         }
     }
     const args = [PYTHON_EXE, helperPath, '--action', action, ...processedArgs];
-    const cmd = args.map(a => `"${a}"`).join(' ');
     let output = '';
     try {
-        output = execSync(cmd, {
+        output = execFileSync(args[0], args.slice(1), {
             encoding: 'utf8', timeout: 600000,
-            stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 50 * 1024 * 1024, shell: true
+            stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 50 * 1024 * 1024
         });
     } catch (e) { output = e.stdout || ''; }
     const lines = output.trim().split(/\r?\n/).filter(l => l.trim());
@@ -382,6 +224,10 @@ async function main() {
     console.log('==========================================');
     console.log('  TRAE MULTI-ROUND AUTO SEND + COLLECT');
     console.log('==========================================');
+    console.log(`  Platform: ${process.platform}/${process.arch}`);
+    console.log(`  Trae launch: ${TRAE_LAUNCH_TARGET || '(not configured)'}`);
+    console.log(`  Trae app name: ${TRAE_APP_NAME}`);
+    console.log(`  Python: ${PYTHON_EXE}`);
     console.log(`  Rounds: ${ROUNDS}  |  Batch: ${BATCH_SIZE}  |  Wait: ${WAIT_SECONDS}s`);
     console.log(`  Switch: ${SWITCH_INTERVAL}s  |  Stop dwell: ${STOP_DWELL}s`);
     console.log(
@@ -445,7 +291,7 @@ async function main() {
         console.log('\nOpening Trae windows...');
         for (const task of tasks) {
             try {
-                execSync(`"${TRAE_EXE}" -n "${task.path}"`, { stdio: 'ignore', timeout: 10000 });
+                platform.launchTraeWindow(TRAE_LAUNCH_TARGET, task.path);
             } catch (e) {}
         }
         console.log('Waiting 15s for windows to load...');
@@ -614,7 +460,7 @@ async function main() {
                     }
                 }
                 // 每遍历完一轮窗口后清理 Edge，防止内存持续增长
-                try { execSync('taskkill /F /IM msedge.exe', { stdio: 'ignore', timeout: 5000 }); } catch (e) {}
+                platform.cleanupBrowserProcesses();
             }
             console.log(`  Wait complete (${fmtTime(Date.now() - waitStart)})`);
 
@@ -624,11 +470,7 @@ async function main() {
             for (const [taskName, handle] of activeHandles) {
                 activateWindow(handle);
                 if (!isFirstStop) {
-                    try {
-                        execSync(`"${PYTHON_EXE}" -c "import pyautogui; h=pyautogui.size()[1]; pyautogui.click(10, h//2)"`, {
-                            encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe']
-                        });
-                    } catch (e) {}
+                    platform.clickLeftMiddle(PYTHON_EXE);
                     await new Promise(r => setTimeout(r, 500));
                 }
                 const stopResult = runHelper('click', ['--image', 'images/stop.png', '--clicks', '1']);
@@ -688,7 +530,7 @@ async function main() {
                     setRoundData(resultData, round, rd);
                     saveResult(task.path, task.name, resultData);
                 }
-                try { execSync('taskkill /F /IM msedge.exe', { stdio: 'ignore', timeout: 5000 }); } catch (e) {}
+                platform.cleanupBrowserProcesses();
             }
 
             // ---------- 步骤 7: 保留原始 trace + 生成不满意原因 ----------
@@ -764,7 +606,7 @@ async function main() {
             }
 
             console.log(`\n[Round ${round}] Complete in ${fmtTime(Date.now() - roundStart)}`);
-            try { execSync('taskkill /F /IM msedge.exe', { stdio: 'ignore', timeout: 5000 }); } catch (e) {}
+            platform.cleanupBrowserProcesses();
             console.log(`  Edge browser cleaned up`);
 
             // 每轮导出 xlsx（增量）
@@ -799,8 +641,8 @@ async function main() {
         for (const task of tasks) {
             if (task.handle) closeWindow(task.handle);
         }
-        try { execSync('taskkill /F /IM trae-cn.exe', { stdio: 'ignore', timeout: 10000 }); } catch (e) {}
-        try { execSync('taskkill /F /IM msedge.exe', { stdio: 'ignore', timeout: 5000 }); } catch (e) {}
+        platform.cleanupTraeProcesses(TRAE_APP_NAME);
+        platform.cleanupBrowserProcesses();
         // 清理临时文件
         try {
             const tmpDir = os.tmpdir();

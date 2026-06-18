@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Trae Helper for Windows
+Trae Helper for Windows/macOS
 配合 run_multi_round.js 获取 SessionID 和 Trace（执行轨迹）
 
 依赖安装:
@@ -17,12 +17,13 @@ import ctypes
 import io
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
 import time
 
-# Windows 终端默认 GBK，强制 stdout 用 UTF-8 避免 emoji 编码崩溃
+# Windows 终端默认 GBK，强制 stdout 用 UTF-8；macOS 下也保持稳定 JSON 输出。
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
@@ -39,6 +40,9 @@ except ImportError as e:
 # 启用 failsafe：鼠标移到屏幕左上角会抛出异常中断，防止失控
 pyautogui.FAILSAFE = True
 
+IS_WINDOWS = platform.system() == "Windows"
+IS_MACOS = platform.system() == "Darwin"
+
 # ---------- SessionID 正则 ----------
 SESSION_ID_PATTERN = re.compile(
     r'\.(\d+):([a-f0-9]+)_([a-f0-9]+)\.([a-f0-9]+)\.([a-f0-9]+):([^.]+)\.T\(([^)]+)\)'
@@ -48,6 +52,8 @@ SESSION_ID_SIMPLE = re.compile(r'\b([a-f0-9]{20,32})\b', re.IGNORECASE)
 
 def is_numlock_on():
     """检查 NumLock 是否开启 (Windows)"""
+    if not IS_WINDOWS:
+        return False
     return bool(ctypes.windll.user32.GetKeyState(0x90) & 1)
 
 
@@ -60,9 +66,12 @@ def ensure_numlock_off():
 
 
 def press_end():
-    """按 End 键"""
-    pyautogui.keyDown('end')
-    pyautogui.keyUp('end')
+    """滚到当前区域底部。"""
+    if IS_MACOS:
+        pyautogui.hotkey('command', 'down')
+    else:
+        pyautogui.keyDown('end')
+        pyautogui.keyUp('end')
     time.sleep(0.5)
 
 
@@ -102,13 +111,23 @@ def load_sessionid_pos():
 def close_edge():
     """关闭所有 Microsoft Edge 浏览器窗口"""
     try:
-        subprocess.run(
-            ['taskkill', '/F', '/IM', 'msedge.exe'],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=5
-        )
+        if IS_MACOS:
+            for pattern in ("Microsoft Edge", "msedge"):
+                subprocess.run(
+                    ['pkill', '-f', pattern],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=5
+                )
+        elif IS_WINDOWS:
+            subprocess.run(
+                ['taskkill', '/F', '/IM', 'msedge.exe'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=5
+            )
     except Exception:
         pass
 
@@ -515,7 +534,7 @@ def action_scroll(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Trae Windows Helper")
+    parser = argparse.ArgumentParser(description="Trae cross-platform helper")
     parser.add_argument("--action", required=True, choices=["sessionid", "trace", "click", "drag", "scroll"])
     parser.add_argument("--image", default="images/sessionid_button.png", help="SessionID 按钮截图路径")
     parser.add_argument("--all-image", default="images/finish_all.png", help="区域定位参考图路径")

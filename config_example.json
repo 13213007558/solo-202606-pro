@@ -1,11 +1,21 @@
 {
   "paths": {
 
-    // 替换为你本机的 Trae CN 安装路径
-    "trae_executable": "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Trae CN\\bin\\trae-cn.cmd",
+    // macOS/M2 推荐：Trae CN CLI 路径；Windows 可改为 trae-cn.cmd 路径
+    // macOS CLI 示例："/usr/local/bin/trae-cn"
+    // Homebrew arm64 备选："/opt/homebrew/bin/trae-cn"
+    // macOS app 备选："/Applications/Trae CN.app"
+    // Windows 示例："C:\\Users\\Administrator\\AppData\\Local\\Programs\\Trae CN\\bin\\trae-cn.cmd"
+    "trae_executable": "/usr/local/bin/trae-cn",
+
+    // macOS 用于 AppleScript 查找窗口的应用进程名；通常保持 Trae CN 即可
+    "trae_app_name": "Trae CN",
 
     // 替换为你本机的 Python 路径
-    "python_executable": "D:\\Anaconda\\envs\\project\\python.exe",
+    // 当前 Mac 本机已验证："/Users/apple/miniconda3/bin/python3"
+    // macOS venv 示例："/Users/apple/Documents/solo/demo-Solo/.venv/bin/python"
+    // Windows Anaconda 示例："D:\\Anaconda\\envs\\project\\python.exe"
+    "python_executable": "/Users/apple/miniconda3/bin/python3",
 
     "tasks_directory": "tasks",
 
@@ -65,7 +75,7 @@
   "automation": {
 
     // 每次打开的窗口数
-    "batch_size": 8,
+    "batch_size": 4,
 
     // 多轮对话的总轮数，当前为3轮
     "rounds": 3,

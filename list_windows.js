@@ -1,67 +1,29 @@
-const { execSync } = require('child_process');
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
+const { listWindows, normalizeAppName } = require('./platform_helpers');
 
-const script = `
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-public class Win32 {
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool IsWindowVisible(IntPtr hWnd);
-    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-}
-"@
-
-$script:results = [System.Collections.ArrayList]::new()
-
-$enumProc = [Win32+EnumWindowsProc]{
-    param($hWnd, $lParam)
-    if ([Win32]::IsWindowVisible($hWnd)) {
-        $tb = New-Object System.Text.StringBuilder(256)
-        [Win32]::GetWindowText($hWnd, $tb, $tb.Capacity) | Out-Null
-        $title = $tb.ToString()
-        if ($title -ne "") {
-            $script:results.Add("HANDLE:$($hWnd) | TITLE:$($title)") | Out-Null
-        }
-    }
-    return $true
-}
-[Win32]::EnumWindows($enumProc, [IntPtr]::Zero) | Out-Null
-
-foreach ($r in $script:results) {
-    Write-Host $r
-}
-`.trim();
-
-const tmpFile = path.join(os.tmpdir(), 'list_windows_' + Date.now() + '.ps1');
-fs.writeFileSync(tmpFile, script, 'utf8');
-
-let output = '';
+let getConfig = () => '';
 try {
-    output = execSync(`powershell -ExecutionPolicy Bypass -File "${tmpFile}"`, {
-        encoding: 'utf8',
-        timeout: 30000
-    });
-} catch (e) {
-    output = e.stdout || '';
+    ({ getConfig } = require('./app_config'));
+} catch (error) {}
+
+const traeExecutable = getConfig('paths', 'trae_executable', '');
+const traeAppName = normalizeAppName(
+    traeExecutable,
+    getConfig('paths', 'trae_app_name', '')
+);
+
+const output = listWindows({ traeAppName });
+
+console.log('All visible Trae windows:');
+console.log('=========================');
+
+const lines = output.trim().split(/\r?\n/).filter(line => line.trim());
+if (!lines.length) {
+    console.log(`No Trae windows found for app name: ${traeAppName}`);
+    process.exit(0);
 }
-try { fs.unlinkSync(tmpFile); } catch (e) {}
 
-console.log('All visible windows:');
-console.log('====================');
-
-const lines = output.trim().split(/\r?\n/).filter(l => l.trim());
 for (const line of lines) {
-    if (line.toLowerCase().includes('trae')) {
+    if (line.toLowerCase().includes('trae') || /auto\d+/i.test(line)) {
         console.log('>>> ' + line);
     } else {
         console.log('    ' + line);

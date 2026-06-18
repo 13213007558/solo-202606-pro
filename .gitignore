@@ -22,8 +22,5 @@ node_modules/
 
 # Runtime state and logs
 .last_sessionid_pos.json
-<<<<<<< HEAD
-=======
 /log/*.log
->>>>>>> 522c54fc0dc6552985c738d5ce4e3f29549b0f07
 ~$*
