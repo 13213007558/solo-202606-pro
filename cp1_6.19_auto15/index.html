@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>CultureFlow · 文化影响力传播网络</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Sora:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #1a1a2e;
+        --bg-deep: #12121f;
+        --panel: rgba(22, 22, 40, 0.72);
+        --panel-border: rgba(255, 255, 255, 0.08);
+        --ink: #e8e8f4;
+        --ink-dim: rgba(232, 232, 244, 0.6);
+        --ink-faint: rgba(232, 232, 244, 0.32);
+
+        --c-eastern: #00d2ff;
+        --c-western: #ff6b6b;
+        --c-african: #ffa502;
+        --c-southamerican: #2ed573;
+
+        --glow-eastern: rgba(0, 210, 255, 0.55);
+        --glow-western: rgba(255, 107, 107, 0.55);
+        --glow-african: rgba(255, 165, 2, 0.55);
+        --glow-southamerican: rgba(46, 213, 115, 0.55);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: 'Sora', system-ui, sans-serif;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      /* atmospheric backdrop */
+      #root {
+        position: relative;
+        background:
+          radial-gradient(1200px 800px at 20% 10%, rgba(0, 210, 255, 0.07), transparent 60%),
+          radial-gradient(1000px 700px at 85% 90%, rgba(255, 107, 107, 0.06), transparent 60%),
+          radial-gradient(900px 700px at 50% 50%, rgba(46, 213, 115, 0.04), transparent 70%),
+          var(--bg);
+      }
+
+      #root::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+        opacity: 0.04;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+      }
+
+      .cf-app {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+      }
+
+      /* ---------- header ---------- */
+      .cf-header {
+        position: absolute;
+        top: 22px;
+        left: 26px;
+        z-index: 20;
+        pointer-events: none;
+      }
+      .cf-title {
+        font-family: 'Syne', sans-serif;
+        font-weight: 800;
+        font-size: 26px;
+        letter-spacing: 0.5px;
+        margin: 0;
+        line-height: 1;
+        background: linear-gradient(90deg, #ffffff, #b8c6ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .cf-subtitle {
+        margin: 6px 0 0;
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+        font-weight: 500;
+      }
+      .cf-yearblock {
+        margin-top: 16px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .cf-year {
+        font-family: 'Syne', sans-serif;
+        font-weight: 800;
+        font-size: 52px;
+        line-height: 0.9;
+        letter-spacing: -1px;
+        color: #ffffff;
+        text-shadow: 0 0 24px rgba(120, 160, 255, 0.35);
+        transition: color 0.4s ease;
+      }
+      .cf-year-tag {
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--ink-dim);
+      }
+
+      /* ---------- legend ---------- */
+      .cf-legend {
+        position: absolute;
+        top: 22px;
+        right: 26px;
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        backdrop-filter: blur(10px);
+        pointer-events: none;
+      }
+      .cf-legend-title {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+        margin-bottom: 2px;
+      }
+      .cf-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--ink-dim);
+      }
+      .cf-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        box-shadow: 0 0 10px currentColor;
+      }
+
+      /* ---------- graph stage ---------- */
+      .cf-stage {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+      }
+      .cf-svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+        touch-action: none;
+      }
+      .cf-svg:active {
+        cursor: grabbing;
+      }
+      .cf-svg .cf-graticule {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.05);
+        stroke-width: 0.5;
+      }
+      .cf-svg .cf-land {
+        fill: rgba(255, 255, 255, 0.035);
+        stroke: rgba(255, 255, 255, 0.09);
+        stroke-width: 0.6;
+      }
+      .cf-link {
+        transition: stroke-opacity 0.25s ease;
+        pointer-events: none;
+      }
+      .cf-node {
+        cursor: pointer;
+        transition: opacity 0.4s ease, filter 0.2s ease;
+      }
+      .cf-node-halo {
+        pointer-events: none;
+      }
+      .cf-node-label {
+        font-family: 'Sora', sans-serif;
+        font-size: 9px;
+        font-weight: 500;
+        fill: rgba(232, 232, 244, 0.78);
+        paint-order: stroke;
+        stroke: rgba(10, 10, 20, 0.85);
+        stroke-width: 2.6px;
+        stroke-linejoin: round;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      /* ---------- hover info card ---------- */
+      .cf-card {
+        position: fixed;
+        z-index: 50;
+        min-width: 188px;
+        background: rgba(255, 255, 255, 0.92);
+        color: #16162a;
+        border-radius: 12px;
+        padding: 12px 14px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, calc(-100% - 14px)) scale(0.96);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        will-change: transform, opacity;
+      }
+      .cf-card.is-visible {
+        opacity: 1;
+        transform: translate(-50%, calc(-100% - 14px)) scale(1);
+      }
+      .cf-card::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        bottom: -6px;
+        width: 12px;
+        height: 12px;
+        transform: translateX(-50%) rotate(45deg);
+        background: rgba(255, 255, 255, 0.92);
+      }
+      .cf-card-name {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 15px;
+        margin: 0 0 2px;
+        letter-spacing: 0.2px;
+      }
+      .cf-card-culture {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 9px;
+      }
+      .cf-card-culture .cf-dot {
+        width: 9px;
+        height: 9px;
+      }
+      .cf-card-rows {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 12px;
+        font-size: 12px;
+      }
+      .cf-card-rows .k {
+        color: #8a8a9c;
+      }
+      .cf-card-rows .v {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .cf-bar {
+        grid-column: 1 / -1;
+        height: 5px;
+        border-radius: 3px;
+        background: #ececf4;
+        overflow: hidden;
+        margin-top: 4px;
+      }
+      .cf-bar > i {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+      }
+
+      /* ---------- footer / controls ---------- */
+      .cf-controls {
+        position: relative;
+        z-index: 20;
+        flex: 0 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        padding: 16px 26px 20px;
+        background: linear-gradient(180deg, transparent, rgba(10, 10, 20, 0.55) 40%);
+      }
+      .cf-control {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        padding: 12px 16px;
+        backdrop-filter: blur(10px);
+      }
+      .cf-control-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      .cf-control-label {
+        font-size: 10px;
+        letter-spacing: 2.4px;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+        font-weight: 600;
+      }
+      .cf-control-value {
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* range slider base */
+      .cf-range {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 26px;
+        background: transparent;
+        cursor: pointer;
+      }
+      .cf-range:focus {
+        outline: none;
+      }
+      .cf-range::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 6px;
+        background: linear-gradient(
+          90deg,
+          rgba(0, 210, 255, 0.5),
+          rgba(255, 107, 107, 0.5),
+          rgba(255, 165, 2, 0.5),
+          rgba(46, 213, 115, 0.5)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .cf-range::-moz-range-track {
+        height: 6px;
+        border-radius: 6px;
+        background: linear-gradient(
+          90deg,
+          rgba(0, 210, 255, 0.5),
+          rgba(255, 107, 107, 0.5),
+          rgba(255, 165, 2, 0.5),
+          rgba(46, 213, 115, 0.5)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .cf-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        margin-top: -7px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid #1a1a2e;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 4px 14px rgba(0, 0, 0, 0.5);
+        cursor: grab;
+        transition: transform 0.15s ease;
+      }
+      .cf-range::-webkit-slider-thumb:active {
+        transform: scale(1.18);
+        cursor: grabbing;
+      }
+      .cf-range::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid #1a1a2e;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 4px 14px rgba(0, 0, 0, 0.5);
+        cursor: grab;
+      }
+
+      /* timeline ticks */
+      .cf-timeline {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .cf-play {
+        flex: 0 0 auto;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+      }
+      .cf-play:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+      .cf-play:active {
+        transform: scale(0.92);
+      }
+      .cf-play.is-playing {
+        background: rgba(0, 210, 255, 0.16);
+        border-color: rgba(0, 210, 255, 0.5);
+        color: var(--c-eastern);
+      }
+      .cf-ticks {
+        position: relative;
+        flex: 1 1 auto;
+      }
+      .cf-ticks .cf-range {
+        width: 100%;
+      }
+      .cf-tickrow {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 4px;
+        font-size: 9px;
+        letter-spacing: 1px;
+        color: var(--ink-faint);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* region slider */
+      .cf-region {
+        display: flex;
+        flex-direction: column;
+      }
+      .cf-region-stops {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 4px;
+        font-size: 9px;
+        letter-spacing: 1px;
+        color: var(--ink-faint);
+        text-transform: uppercase;
+      }
+
+      /* responsive: stack controls vertically on narrow screens */
+      @media (max-width: 760px) {
+        .cf-controls {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto;
+        }
+        .cf-header {
+          top: 16px;
+          left: 16px;
+        }
+        .cf-title {
+          font-size: 20px;
+        }
+        .cf-year {
+          font-size: 38px;
+        }
+        .cf-legend {
+          top: 14px;
+          right: 14px;
+          padding: 8px 10px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .cf-legend-item {
+          font-size: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/App.tsx"></script>
+  </body>
+</html>
